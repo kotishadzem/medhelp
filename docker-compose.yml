@@ -6,7 +6,7 @@ services:
     container_name: medhelp-postgres
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5434:5432"
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-medhelp}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medhelp_secret}
