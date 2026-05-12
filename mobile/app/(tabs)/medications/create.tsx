@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import { medicationsApi } from "@/lib/api/endpoints";
 import { Button } from "@/components/Button";
 import { addDaysYMD, dateInputToISO, todayYMD } from "@/lib/format";
+import { scheduleForMedication } from "@/lib/notifications";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 const DEFAULT_TIMES = ["08:00", "14:00", "20:00", "22:00"];
@@ -42,7 +43,16 @@ export default function CreateMedication() {
   const endYMD = useMemo(() => addDaysYMD(startYMD, Math.max(1, durationDays) - 1), [startYMD, durationDays]);
 
   const mutation = useMutation({
-    mutationFn: medicationsApi.create,
+    mutationFn: async (input: Parameters<typeof medicationsApi.create>[0]) => {
+      const created = await medicationsApi.create(input);
+      try {
+        const detail = await medicationsApi.detail(created.medication.id);
+        await scheduleForMedication(detail.medication, detail.medication.intakes);
+      } catch {
+        // notification scheduling is best-effort
+      }
+      return created;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["medications"] });
       qc.invalidateQueries({ queryKey: ["today"] });

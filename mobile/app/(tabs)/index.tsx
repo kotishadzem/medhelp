@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { medicationsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { cancelForIntakes } from "@/lib/notifications";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import { formatTimeHHMM, timePeriod } from "@/lib/format";
 import type { IntakeWithMedication } from "@/lib/types";
@@ -78,6 +79,7 @@ export default function TodayScreen() {
       );
       try {
         await medicationsApi.updateIntake(intake.medicationId, intake.id, "TAKEN");
+        await cancelForIntakes([intake.id]);
         qc.invalidateQueries({ queryKey: ["today"] });
       } catch {
         qc.invalidateQueries({ queryKey: ["today"] });

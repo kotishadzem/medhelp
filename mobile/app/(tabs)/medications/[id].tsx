@@ -14,6 +14,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { medicationsApi } from "@/lib/api/endpoints";
 import { IntakeBadge, MedicationBadge } from "@/components/StatusBadge";
 import { formatDateShort, formatTimeHHMM } from "@/lib/format";
+import {
+  cancelForMedication,
+  rescheduleMedication,
+} from "@/lib/notifications";
 import type { MedicationStatus } from "@/lib/types";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
@@ -35,7 +39,16 @@ export default function MedicationDetail() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: (status: MedicationStatus) => medicationsApi.update(id!, { status }),
+    mutationFn: async (status: MedicationStatus) => {
+      const result = await medicationsApi.update(id!, { status });
+      const intakes = query.data?.medication.intakes ?? [];
+      if (status === "ACTIVE") {
+        await rescheduleMedication(result.medication, intakes);
+      } else {
+        await cancelForMedication(intakes);
+      }
+      return result;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["medications"] });
       qc.invalidateQueries({ queryKey: ["today"] });
@@ -43,7 +56,11 @@ export default function MedicationDetail() {
   });
 
   const remove = useMutation({
-    mutationFn: () => medicationsApi.remove(id!),
+    mutationFn: async () => {
+      const intakes = query.data?.medication.intakes ?? [];
+      await cancelForMedication(intakes);
+      return medicationsApi.remove(id!);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["medications"] });
       qc.invalidateQueries({ queryKey: ["today"] });

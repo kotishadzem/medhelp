@@ -10,6 +10,7 @@ import {
 } from "react";
 import { configureTokens } from "@/lib/api/client";
 import { authApi } from "@/lib/api/endpoints";
+import { cancelAll as cancelAllNotifications } from "@/lib/notifications";
 import {
   clearStoredPhone,
   clearStoredRefreshToken,
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     accessTokenRef.current = null;
     refreshTokenRef.current = null;
     await clearStoredRefreshToken();
+    await cancelAllNotifications();
     setState((s) => ({
       status: "unauthenticated",
       user: null,
