@@ -36,7 +36,10 @@ export async function GET(request: NextRequest) {
       orderBy: { scheduledAt: "asc" },
     });
 
-    return success({ date: startOfDay.toISOString().split("T")[0], intakes });
+    const yyyy = startOfDay.getFullYear();
+    const mm = String(startOfDay.getMonth() + 1).padStart(2, "0");
+    const dd = String(startOfDay.getDate()).padStart(2, "0");
+    return success({ date: `${yyyy}-${mm}-${dd}`, intakes });
   } catch {
     return error("Internal server error", 500);
   }
