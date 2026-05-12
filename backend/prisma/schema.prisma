@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  PATIENT
+  ADMIN
+}
+
+enum MedicationStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  PAUSED
+}
+
+enum IntakeStatus {
+  PENDING
+  TAKEN
+  MISSED
+  SKIPPED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  phone         String         @unique
+  pinHash       String?
+  firstName     String?
+  lastName      String?
+  role          UserRole       @default(PATIENT)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  medications   Medication[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Medication {
+  id              String           @id @default(cuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  dosage          String
+  instructions    String?
+  startDate       DateTime
+  endDate         DateTime
+  frequencyPerDay Int
+  timesOfDay      String[]
+  status          MedicationStatus @default(ACTIVE)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  intakes         MedicationIntake[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("medications")
+}
+
+model MedicationIntake {
+  id           String       @id @default(cuid())
+  medicationId String
+  medication   Medication   @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  scheduledAt  DateTime
+  takenAt      DateTime?
+  status       IntakeStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+
+  @@index([medicationId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("medication_intakes")
+}
