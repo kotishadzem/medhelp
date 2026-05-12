@@ -24,6 +24,7 @@ type AuthState = {
   status: "loading" | "unauthenticated" | "authenticated";
   user: User | null;
   storedPhone: string | null;
+  pendingPinSetup: boolean;
 };
 
 type AuthContextValue = AuthState & {
@@ -48,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status: "loading",
     user: null,
     storedPhone: null,
+    pendingPinSetup: false,
   });
 
   const logout = useCallback(async () => {
@@ -56,13 +58,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         await authApi.logout(refreshToken);
       } catch {
-        // ignore — local state is what matters
+        // ignore
       }
     }
     accessTokenRef.current = null;
     refreshTokenRef.current = null;
     await clearStoredRefreshToken();
-    setState((s) => ({ status: "unauthenticated", user: null, storedPhone: s.storedPhone }));
+    setState((s) => ({
+      status: "unauthenticated",
+      user: null,
+      storedPhone: s.storedPhone,
+      pendingPinSetup: false,
+    }));
   }, []);
 
   useEffect(() => {
@@ -80,12 +87,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessTokenRef.current = null;
         refreshTokenRef.current = null;
         await clearStoredRefreshToken();
-        setState((s) => ({ status: "unauthenticated", user: null, storedPhone: s.storedPhone }));
+        setState((s) => ({
+          status: "unauthenticated",
+          user: null,
+          storedPhone: s.storedPhone,
+          pendingPinSetup: false,
+        }));
       },
     });
   }, []);
 
-  // Bootstrap on mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -96,22 +107,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
 
       if (!storedToken) {
-        setState({ status: "unauthenticated", user: null, storedPhone });
+        setState({
+          status: "unauthenticated",
+          user: null,
+          storedPhone,
+          pendingPinSetup: false,
+        });
         return;
       }
 
       refreshTokenRef.current = storedToken;
-      // Force a refresh to validate the token + fetch profile.
       try {
-        // Trigger refresh by calling /me which auto-refreshes on 401.
         const { user } = await authApi.me();
         if (cancelled) return;
-        setState({ status: "authenticated", user, storedPhone });
+        setState({
+          status: "authenticated",
+          user,
+          storedPhone,
+          pendingPinSetup: !user.hasPin,
+        });
       } catch {
         if (cancelled) return;
         refreshTokenRef.current = null;
         await clearStoredRefreshToken();
-        setState({ status: "unauthenticated", user: null, storedPhone });
+        setState({
+          status: "unauthenticated",
+          user: null,
+          storedPhone,
+          pendingPinSetup: false,
+        });
       }
     })();
     return () => {
@@ -120,12 +144,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSession = useCallback(
-    async (accessToken: string, refreshToken: string, user: User) => {
+    async (accessToken: string, refreshToken: string, user: User, needsPin: boolean) => {
       accessTokenRef.current = accessToken;
       refreshTokenRef.current = refreshToken;
       await setStoredRefreshToken(refreshToken);
       await setStoredPhone(user.phone);
-      setState({ status: "authenticated", user, storedPhone: user.phone });
+      setState({
+        status: "authenticated",
+        user,
+        storedPhone: user.phone,
+        pendingPinSetup: needsPin,
+      });
     },
     []
   );
@@ -133,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithOtp = useCallback(
     async (phone: string, code: string) => {
       const res = await authApi.verifyOtp(phone, code);
-      await setSession(res.accessToken, res.refreshToken, res.user);
+      await setSession(res.accessToken, res.refreshToken, res.user, !res.hasPinSet);
       return { isNewUser: res.isNewUser, hasPinSet: res.hasPinSet };
     },
     [setSession]
@@ -142,13 +171,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithPin = useCallback(
     async (phone: string, pin: string) => {
       const res = await authApi.loginPin(phone, pin);
-      await setSession(res.accessToken, res.refreshToken, res.user);
+      await setSession(res.accessToken, res.refreshToken, res.user, false);
     },
     [setSession]
   );
 
   const setupPin = useCallback(async (pin: string) => {
     await authApi.setupPin(pin);
+    setState((s) => ({ ...s, pendingPinSetup: false }));
   }, []);
 
   const forgetPhone = useCallback(async () => {
@@ -158,7 +188,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshMe = useCallback(async () => {
     const { user } = await authApi.me();
-    setState((s) => ({ ...s, user, status: "authenticated" }));
+    setState((s) => ({
+      ...s,
+      user,
+      status: "authenticated",
+      pendingPinSetup: !user.hasPin,
+    }));
   }, []);
 
   const setUser = useCallback((user: User) => {

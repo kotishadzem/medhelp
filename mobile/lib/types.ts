@@ -9,6 +9,7 @@ export type User = {
   lastName: string | null;
   role: UserRole;
   createdAt?: string;
+  hasPin?: boolean;
 };
 
 export type Medication = {

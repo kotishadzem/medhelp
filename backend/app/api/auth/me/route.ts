@@ -18,12 +18,14 @@ export async function GET(request: NextRequest) {
         lastName: true,
         role: true,
         createdAt: true,
+        pinHash: true,
       },
     });
 
     if (!user) return notFound("User not found");
 
-    return success({ user });
+    const { pinHash, ...publicUser } = user;
+    return success({ user: { ...publicUser, hasPin: !!pinHash } });
   } catch {
     return error("Internal server error", 500);
   }
@@ -50,10 +52,12 @@ export async function PATCH(request: NextRequest) {
         lastName: true,
         role: true,
         createdAt: true,
+        pinHash: true,
       },
     });
 
-    return success({ user });
+    const { pinHash, ...publicUser } = user;
+    return success({ user: { ...publicUser, hasPin: !!pinHash } });
   } catch {
     return error("Internal server error", 500);
   }
