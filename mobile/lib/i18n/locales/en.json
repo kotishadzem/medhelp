@@ -15,7 +15,7 @@
   "register": {
     "eyebrow": "MEDHELP",
     "title": "Welcome\nto MedHelp",
-    "subtitle": "Enter your phone number — we'll text you a one-time code.",
+    "subtitle": "Enter your phone number to continue.",
     "phoneLabel": "Mobile number",
     "phonePlaceholder": "555 12 34 56",
     "emailLabel": "Email address",
@@ -33,7 +33,7 @@
       "email": "Email address",
       "emailSubtitle": "Receive a code in your inbox"
     },
-    "subtitleEmail": "Enter your email — we'll send you a one-time code.",
+    "subtitleEmail": "Enter your email to continue.",
     "otp": {
       "eyebrow": "VERIFICATION",
       "title": "Enter the code",

@@ -15,7 +15,7 @@
   "register": {
     "eyebrow": "MEDHELP",
     "title": "Willkommen\nbei MedHelp",
-    "subtitle": "Gib deine Telefonnummer ein — wir senden dir einen Einmalcode.",
+    "subtitle": "Gib deine Telefonnummer ein, um fortzufahren.",
     "phoneLabel": "Mobilnummer",
     "phonePlaceholder": "555 12 34 56",
     "emailLabel": "E-Mail-Adresse",
@@ -33,7 +33,7 @@
       "email": "E-Mail-Adresse",
       "emailSubtitle": "Code an dein Postfach"
     },
-    "subtitleEmail": "Gib deine E-Mail ein — wir senden dir einen Einmalcode.",
+    "subtitleEmail": "Gib deine E-Mail ein, um fortzufahren.",
     "otp": {
       "eyebrow": "BESTÄTIGUNG",
       "title": "Code eingeben",

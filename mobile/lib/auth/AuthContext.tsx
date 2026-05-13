@@ -30,9 +30,8 @@ type AuthState = {
 };
 
 type AuthContextValue = AuthState & {
-  loginWithOtp: (
-    id: Identifier,
-    code: string
+  identify: (
+    id: Identifier
   ) => Promise<{ isNewUser: boolean; hasPinSet: boolean }>;
   loginWithPin: (id: Identifier, pin: string) => Promise<void>;
   setupPin: (pin: string) => Promise<void>;
@@ -169,9 +168,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const loginWithOtp = useCallback(
-    async (id: Identifier, code: string) => {
-      const res = await authApi.verifyOtp(id, code);
+  const identify = useCallback(
+    async (id: Identifier) => {
+      const res = await authApi.identify(id);
       await setSession(res.accessToken, res.refreshToken, res.user, !res.hasPinSet);
       return { isNewUser: res.isNewUser, hasPinSet: res.hasPinSet };
     },
@@ -213,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
-      loginWithOtp,
+      identify,
       loginWithPin,
       setupPin,
       logout,
@@ -221,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshMe,
       setUser,
     }),
-    [state, loginWithOtp, loginWithPin, setupPin, logout, forgetIdentifier, refreshMe, setUser]
+    [state, identify, loginWithPin, setupPin, logout, forgetIdentifier, refreshMe, setUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

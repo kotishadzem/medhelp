@@ -13,10 +13,10 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/Button";
-import { CodeCells, PinDots, PinPad } from "@/components/PinPad";
+import { PinDots, PinPad } from "@/components/PinPad";
 import { CountryPicker } from "@/components/CountryPicker";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { authApi, type Identifier } from "@/lib/api/endpoints";
+import { type Identifier } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { formatPhoneForDisplay, normalizePhone } from "@/lib/phone";
 import { COUNTRIES, DEFAULT_COUNTRY, type Country } from "@/lib/countries";
@@ -28,19 +28,18 @@ import {
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 type Method = "phone" | "email";
-type Step = "language" | "method" | "phone" | "email" | "otp" | "pin" | "pin-confirm";
+type Step = "language" | "method" | "phone" | "email" | "pin" | "pin-confirm";
 
 export default function Register() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
-  const { loginWithOtp, setupPin, refreshMe, pendingPinSetup, user } = useAuth();
+  const { identify, setupPin, refreshMe, pendingPinSetup } = useAuth();
 
   const [step, setStep] = useState<Step>(pendingPinSetup ? "pin" : "language");
   const [method, setMethod] = useState<Method>("phone");
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -51,50 +50,31 @@ export default function Register() {
       ? { phone: `${country.dial}${normalizePhone(phone)}` }
       : { email: email.trim() };
 
-  const displayTarget = (): string =>
-    method === "phone"
-      ? `${country.dial} ${formatPhoneForDisplay(phone)}`
-      : email.trim();
-
-  const handleSendOtpPhone = async () => {
+  const handleSubmitPhone = async () => {
     const normalized = normalizePhone(phone);
     if (normalized.length < 6) {
       setError(t("register.phoneTooShort"));
       return;
     }
-    await sendOtp();
+    await identifyAndAdvance();
   };
 
-  const handleSendOtpEmail = async () => {
+  const handleSubmitEmail = async () => {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError(t("register.emailTooShort"));
       return;
     }
-    await sendOtp();
+    await identifyAndAdvance();
   };
 
-  const sendOtp = async () => {
+  const identifyAndAdvance = async () => {
     setError(null);
     setLoading(true);
     try {
-      await authApi.sendOtp(currentIdentifier());
-      setStep("otp");
-    } catch (e) {
-      setError(messageFor(e, t));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (entered: string) => {
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await loginWithOtp(currentIdentifier(), entered);
-      if (res.hasPinSet) return;
+      const res = await identify(currentIdentifier());
+      if (res.hasPinSet) return; // auth guard sends to (tabs)
       setStep("pin");
     } catch (e) {
-      setCode("");
       setError(messageFor(e, t));
     } finally {
       setLoading(false);
@@ -123,12 +103,6 @@ export default function Register() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (step === "otp" && code.length === 4 && !loading) {
-      handleVerifyOtp(code);
-    }
-  }, [step, code, loading]);
 
   useEffect(() => {
     if (step === "pin" && pin.length === 4) {
@@ -177,7 +151,7 @@ export default function Register() {
               onChangePhone={setPhone}
               error={error}
               loading={loading}
-              onSubmit={handleSendOtpPhone}
+              onSubmit={handleSubmitPhone}
               onSwitchLogin={() => router.replace("/(auth)/login")}
               onBack={() => setStep("method")}
             />
@@ -189,33 +163,9 @@ export default function Register() {
               onChangeEmail={setEmail}
               error={error}
               loading={loading}
-              onSubmit={handleSendOtpEmail}
+              onSubmit={handleSubmitEmail}
               onSwitchLogin={() => router.replace("/(auth)/login")}
               onBack={() => setStep("method")}
-            />
-          )}
-
-          {step === "otp" && (
-            <OtpStep
-              target={displayTarget()}
-              code={code}
-              onChange={setCode}
-              error={error}
-              loading={loading}
-              onResend={async () => {
-                setCode("");
-                setError(null);
-                try {
-                  await authApi.sendOtp(currentIdentifier());
-                } catch (e) {
-                  setError(messageFor(e, t));
-                }
-              }}
-              onBack={() => {
-                setCode("");
-                setError(null);
-                setStep(method);
-              }}
             />
           )}
 
@@ -517,65 +467,6 @@ function EmailStep({
         <Pressable onPress={onSwitchLogin} style={styles.linkRow}>
           <Text style={styles.linkText}>{t("register.haveAccount")}</Text>
           <Text style={styles.linkAction}>{t("register.login")}</Text>
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-function OtpStep({
-  target,
-  code,
-  onChange,
-  error,
-  loading,
-  onResend,
-  onBack,
-}: {
-  target: string;
-  code: string;
-  onChange: (v: string) => void;
-  error: string | null;
-  loading: boolean;
-  onResend: () => void;
-  onBack: () => void;
-}) {
-  const { t } = useTranslation();
-  const hiddenRef = useRef<TextInput>(null);
-  useEffect(() => {
-    const tt = setTimeout(() => hiddenRef.current?.focus(), 200);
-    return () => clearTimeout(tt);
-  }, []);
-
-  return (
-    <View style={styles.stepContainer}>
-      <View style={styles.header}>
-        <Text style={styles.eyebrow}>{t("register.otp.eyebrow")}</Text>
-        <Text style={styles.title}>{t("register.otp.title")}</Text>
-        <Text style={styles.subtitle}>{t("register.otp.subtitle", { target })}</Text>
-      </View>
-
-      <Pressable style={styles.codeArea} onPress={() => hiddenRef.current?.focus()}>
-        <CodeCells length={4} value={code} error={!!error} />
-        <TextInput
-          ref={hiddenRef}
-          value={code}
-          onChangeText={(text) => onChange(text.replace(/\D/g, "").slice(0, 4))}
-          keyboardType="number-pad"
-          maxLength={4}
-          style={styles.hiddenInput}
-          autoFocus
-        />
-      </Pressable>
-
-      <View style={{ alignItems: "center", gap: spacing.sm }}>
-        {error && <Text style={styles.errorText}>{error}</Text>}
-        {loading && <Text style={styles.muted}>{t("register.otp.verifying")}</Text>}
-        <Pressable onPress={onResend} hitSlop={8}>
-          <Text style={styles.linkAction}>{t("register.otp.resend")}</Text>
-        </Pressable>
-        <Pressable onPress={onBack} hitSlop={8}>
-          <Text style={styles.linkText}>{t("register.otp.changeNumber")}</Text>
         </Pressable>
       </View>
     </View>

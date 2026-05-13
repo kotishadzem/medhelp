@@ -13,17 +13,11 @@ import type {
 export type Identifier = { phone: string } | { email: string };
 
 export const authApi = {
-  sendOtp: (id: Identifier) =>
-    apiRequest<{ message: string }>("/auth/send-otp", {
+  // OTP-less: create-or-login by phone/email, returns tokens directly.
+  identify: (id: Identifier) =>
+    apiRequest<VerifyOtpResponse>("/auth/identify", {
       method: "POST",
       body: id,
-      auth: false,
-    }),
-
-  verifyOtp: (id: Identifier, code: string) =>
-    apiRequest<VerifyOtpResponse>("/auth/verify-otp", {
-      method: "POST",
-      body: { ...id, code },
       auth: false,
     }),
 
