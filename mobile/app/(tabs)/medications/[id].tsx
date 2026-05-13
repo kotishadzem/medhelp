@@ -1,6 +1,5 @@
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +17,7 @@ import {
   cancelForMedication,
   rescheduleMedication,
 } from "@/lib/notifications";
+import { confirm } from "@/lib/confirm";
 import type { MedicationStatus } from "@/lib/types";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import { useTranslation } from "react-i18next";
@@ -101,16 +101,16 @@ export default function MedicationDetail() {
           {m.name}
         </Text>
         <Pressable
-          onPress={() =>
-            Alert.alert(t("medications.delete.title"), t("medications.delete.confirm", { name: m.name }), [
-              { text: t("medications.delete.cancel"), style: "cancel" },
-              {
-                text: t("medications.delete.ok"),
-                style: "destructive",
-                onPress: () => remove.mutate(),
-              },
-            ])
-          }
+          onPress={async () => {
+            const ok = await confirm({
+              title: t("medications.delete.title"),
+              body: t("medications.delete.confirm", { name: m.name }),
+              confirmLabel: t("medications.delete.ok"),
+              cancelLabel: t("medications.delete.cancel"),
+              destructive: true,
+            });
+            if (ok) remove.mutate();
+          }}
           hitSlop={10}
         >
           <Ionicons name="trash-outline" size={22} color={colors.danger} />

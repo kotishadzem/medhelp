@@ -1,6 +1,5 @@
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -15,6 +14,7 @@ import { Link, useRouter, type Href } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { familyApi } from "@/lib/api/endpoints";
 import type { FamilyLink, FamilyParty } from "@/lib/types";
+import { confirm } from "@/lib/confirm";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 export default function FamilyList() {
@@ -40,15 +40,15 @@ export default function FamilyList() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["family"] }),
   });
 
-  const confirmRemove = (link: FamilyLink) => {
-    Alert.alert(
-      t("family.removeConfirmTitle"),
-      t("family.removeConfirmBody", { name: displayName(link) }),
-      [
-        { text: t("family.cancel" as never, { defaultValue: "Cancel" }), style: "cancel" },
-        { text: t("family.remove"), style: "destructive", onPress: () => remove.mutate(link.id) },
-      ]
-    );
+  const confirmRemove = async (link: FamilyLink) => {
+    const ok = await confirm({
+      title: t("family.removeConfirmTitle"),
+      body: t("family.removeConfirmBody", { name: displayName(link) }),
+      confirmLabel: t("family.remove"),
+      cancelLabel: t("family.cancel" as never, { defaultValue: "Cancel" }),
+      destructive: true,
+    });
+    if (ok) remove.mutate(link.id);
   };
 
   return (

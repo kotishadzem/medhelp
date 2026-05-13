@@ -19,8 +19,9 @@ import { useRouter, type Href } from "expo-router";
 import { authApi, familyApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/Button";
-import { formatPhoneForDisplay } from "@/lib/phone";
+import { formatPhonePretty } from "@/lib/phone";
 import { changeLanguage, SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n";
+import { confirm } from "@/lib/confirm";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 const FLAG: Record<Language, string> = { ka: "🇬🇪", en: "🇬🇧", de: "🇩🇪" };
@@ -90,9 +91,7 @@ export default function Profile() {
                   : t("profile.noName")}
               </Text>
               <Text style={styles.phone}>
-                {user?.phone
-                  ? `+ ${formatPhoneForDisplay(user.phone)}`
-                  : user?.email ?? ""}
+                {user?.phone ? formatPhonePretty(user.phone) : user?.email ?? ""}
               </Text>
             </View>
           </View>
@@ -170,12 +169,16 @@ export default function Profile() {
               icon="log-out-outline"
               label={t("profile.logout")}
               destructive
-              onPress={() =>
-                Alert.alert(t("profile.logoutConfirmTitle"), t("profile.logoutConfirmBody"), [
-                  { text: t("profile.cancel"), style: "cancel" },
-                  { text: t("profile.logout"), style: "destructive", onPress: () => logout() },
-                ])
-              }
+              onPress={async () => {
+                const ok = await confirm({
+                  title: t("profile.logoutConfirmTitle"),
+                  body: t("profile.logoutConfirmBody"),
+                  confirmLabel: t("profile.logout"),
+                  cancelLabel: t("profile.cancel"),
+                  destructive: true,
+                });
+                if (ok) logout();
+              }}
             />
           </View>
         </ScrollView>
