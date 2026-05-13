@@ -73,6 +73,7 @@
   },
   "quickUnlockSettings": {
     "title": "Schnellanmeldung",
+    "subtitle": "Aktiviere jede Methode einzeln. Zum Umschalten ist eine Bestätigung mit derselben Methode nötig.",
     "enabled": "Schnellanmeldung aktiviert",
     "setupHint": "4-stellige PIN zum Aktivieren eingeben",
     "pinSection": "PIN",
@@ -84,14 +85,17 @@
     "bioGeneric": "Biometrie",
     "bioOn": "Aktiv",
     "bioOff": "Aus",
+    "activeNow": "Aktiv jetzt",
+    "nothingOn": "Keine — du brauchst beim nächsten Mal dein Passwort",
     "dangerSection": "Weiteres",
     "disable": "Schnellanmeldung deaktivieren",
     "disableTitle": "Deaktivieren",
     "disableConfirm": "Schnellanmeldung deaktivieren? Beim nächsten Mal brauchst du dein Passwort.",
+    "enterCurrentPinDisable": "PIN zum Deaktivieren eingeben",
     "enterOldPin": "Aktuelle PIN",
     "enterNewPin": "Neue PIN",
     "confirmNewPin": "Neue PIN bestätigen",
-    "oldPinInvalid": "Aktuelle PIN ist falsch",
+    "oldPinInvalid": "PIN ist falsch",
     "changed": "PIN aktualisiert"
   },
   "login": {

@@ -5,7 +5,8 @@ const REFRESH_TOKEN_KEY = "medhelp.refreshToken";
 const IDENTIFIER_KEY = "medhelp.identifier";
 const QUICK_PIN_KEY = "medhelp.quickUnlock.pin";
 const QUICK_ASKED_KEY = "medhelp.quickUnlock.asked";
-const QUICK_BIOMETRIC_KEY = "medhelp.quickUnlock.biometric";
+const QUICK_FINGERPRINT_KEY = "medhelp.quickUnlock.fingerprint";
+const QUICK_FACE_KEY = "medhelp.quickUnlock.face";
 
 const webStore = {
   getItemAsync: async (key: string) =>
@@ -73,17 +74,25 @@ export async function setQuickAsked(asked: boolean): Promise<void> {
   await store.setItemAsync(QUICK_ASKED_KEY, asked ? "true" : "false");
 }
 
-export async function getBiometricEnabled(): Promise<boolean> {
-  return (await store.getItemAsync(QUICK_BIOMETRIC_KEY)) === "true";
+export async function getFingerprintEnabled(): Promise<boolean> {
+  return (await store.getItemAsync(QUICK_FINGERPRINT_KEY)) === "true";
 }
-export async function setBiometricEnabled(enabled: boolean): Promise<void> {
-  await store.setItemAsync(QUICK_BIOMETRIC_KEY, enabled ? "true" : "false");
+export async function setFingerprintEnabled(enabled: boolean): Promise<void> {
+  await store.setItemAsync(QUICK_FINGERPRINT_KEY, enabled ? "true" : "false");
+}
+
+export async function getFaceEnabled(): Promise<boolean> {
+  return (await store.getItemAsync(QUICK_FACE_KEY)) === "true";
+}
+export async function setFaceEnabled(enabled: boolean): Promise<void> {
+  await store.setItemAsync(QUICK_FACE_KEY, enabled ? "true" : "false");
 }
 
 export async function clearQuickUnlock(): Promise<void> {
   await Promise.all([
     clearQuickPin(),
-    store.deleteItemAsync(QUICK_BIOMETRIC_KEY),
+    store.deleteItemAsync(QUICK_FINGERPRINT_KEY),
+    store.deleteItemAsync(QUICK_FACE_KEY),
     store.deleteItemAsync(QUICK_ASKED_KEY),
   ]);
 }

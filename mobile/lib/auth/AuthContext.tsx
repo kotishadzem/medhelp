@@ -16,16 +16,19 @@ import {
   clearQuickUnlock,
   clearStoredIdentifier,
   clearStoredRefreshToken,
-  getBiometricEnabled,
+  getFaceEnabled,
+  getFingerprintEnabled,
   getQuickAsked,
   getQuickPin,
   getStoredIdentifier,
   getStoredRefreshToken,
-  setBiometricEnabled,
+  setFaceEnabled,
+  setFingerprintEnabled,
   setQuickAsked,
   setQuickPin,
   setStoredIdentifier,
   setStoredRefreshToken,
+  clearQuickPin,
   type StoredIdentifier,
 } from "./storage";
 import type { User } from "@/lib/types";
@@ -34,11 +37,10 @@ type AuthState = {
   status: "loading" | "unauthenticated" | "locked" | "authenticated";
   user: User | null;
   storedIdentifier: StoredIdentifier | null;
-  // After a fresh registration, prompt the user to opt-in to quick sign-in.
   needsQuickUnlockSetup: boolean;
-  // Whether the local quick-unlock PIN is currently set.
   quickUnlockEnabled: boolean;
-  biometricEnabled: boolean;
+  fingerprintEnabled: boolean;
+  faceEnabled: boolean;
 };
 
 type AuthContextValue = AuthState & {
@@ -48,14 +50,18 @@ type AuthContextValue = AuthState & {
   forgetIdentifier: () => Promise<void>;
   refreshMe: () => Promise<void>;
   setUser: (user: User) => void;
-  // Quick unlock
+  // Quick unlock primitives
   enableQuickUnlock: (pin: string) => Promise<void>;
-  setBiometric: (enabled: boolean) => Promise<void>;
   skipQuickUnlock: () => Promise<void>;
   disableQuickUnlock: () => Promise<void>;
   unlockWithPin: (pin: string) => Promise<boolean>;
   approveUnlock: () => Promise<void>;
   changePin: (oldPin: string, newPin: string) => Promise<boolean>;
+  // Verification-aware setters
+  setQuickPinValue: (pin: string) => Promise<void>;
+  removeQuickPin: () => Promise<void>;
+  setFingerprint: (enabled: boolean) => Promise<void>;
+  setFace: (enabled: boolean) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -76,7 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     storedIdentifier: null,
     needsQuickUnlockSetup: false,
     quickUnlockEnabled: false,
-    biometricEnabled: false,
+    fingerprintEnabled: false,
+    faceEnabled: false,
   });
 
   const logout = useCallback(async () => {
@@ -100,7 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storedIdentifier: s.storedIdentifier,
       needsQuickUnlockSetup: false,
       quickUnlockEnabled: false,
-      biometricEnabled: false,
+      fingerprintEnabled: false,
+      faceEnabled: false,
     }));
   }, [queryClient]);
 
@@ -127,7 +135,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storedIdentifier: s.storedIdentifier,
           needsQuickUnlockSetup: false,
           quickUnlockEnabled: false,
-          biometricEnabled: false,
+          fingerprintEnabled: false,
+          faceEnabled: false,
         }));
       },
     });
@@ -136,15 +145,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [storedToken, storedIdentifier, quickPin, biometric] = await Promise.all([
+      const [storedToken, storedIdentifier, quickPin, fingerprint, face] = await Promise.all([
         getStoredRefreshToken(),
         getStoredIdentifier(),
         getQuickPin(),
-        getBiometricEnabled(),
+        getFingerprintEnabled(),
+        getFaceEnabled(),
       ]);
       if (cancelled) return;
 
-      const quickUnlockEnabled = !!quickPin;
+      const pinEnabled = !!quickPin;
+      const anyQuick = pinEnabled || fingerprint || face;
 
       if (!storedToken) {
         setState({
@@ -153,22 +164,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storedIdentifier,
           needsQuickUnlockSetup: false,
           quickUnlockEnabled: false,
-          biometricEnabled: false,
+          fingerprintEnabled: false,
+          faceEnabled: false,
         });
         return;
       }
 
       refreshTokenRef.current = storedToken;
 
-      if (quickUnlockEnabled) {
-        // Don't fetch /me yet — show the lock screen and let user unlock.
+      if (anyQuick) {
         setState({
           status: "locked",
           user: null,
           storedIdentifier,
           needsQuickUnlockSetup: false,
-          quickUnlockEnabled: true,
-          biometricEnabled: biometric,
+          quickUnlockEnabled: pinEnabled,
+          fingerprintEnabled: fingerprint,
+          faceEnabled: face,
         });
         return;
       }
@@ -182,7 +194,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storedIdentifier: identifierFromUser(user) ?? storedIdentifier,
           needsQuickUnlockSetup: false,
           quickUnlockEnabled: false,
-          biometricEnabled: biometric,
+          fingerprintEnabled: false,
+          faceEnabled: false,
         });
       } catch {
         if (cancelled) return;
@@ -194,7 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           storedIdentifier,
           needsQuickUnlockSetup: false,
           quickUnlockEnabled: false,
-          biometricEnabled: false,
+          fingerprintEnabled: false,
+          faceEnabled: false,
         });
       }
     })();
@@ -217,19 +231,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const id = identifierFromUser(user);
       if (id) await setStoredIdentifier(id);
 
-      // Determine if we should prompt for quick-unlock setup.
       const asked = await getQuickAsked();
-      const hasPin = !!(await getQuickPin());
-      const shouldPrompt = opts.promptQuickUnlock && !asked && !hasPin;
-      const biometric = await getBiometricEnabled();
+      const pin = await getQuickPin();
+      const fingerprint = await getFingerprintEnabled();
+      const face = await getFaceEnabled();
+      const shouldPrompt = opts.promptQuickUnlock && !asked && !pin && !fingerprint && !face;
 
       setState({
         status: "authenticated",
         user,
         storedIdentifier: id,
         needsQuickUnlockSetup: shouldPrompt,
-        quickUnlockEnabled: hasPin,
-        biometricEnabled: biometric,
+        quickUnlockEnabled: !!pin,
+        fingerprintEnabled: fingerprint,
+        faceEnabled: face,
       });
     },
     [queryClient]
@@ -248,7 +263,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (id: Identifier, password: string) => {
       const res = await authApi.register(id, password);
-      // Brand-new account → prompt for quick-unlock.
       await setSession(res.accessToken, res.refreshToken, res.user, {
         promptQuickUnlock: true,
       });
@@ -266,9 +280,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const setBiometric = useCallback(async (enabled: boolean) => {
-    await setBiometricEnabled(enabled);
-    setState((s) => ({ ...s, biometricEnabled: enabled }));
+  const setQuickPinValue = useCallback(async (pin: string) => {
+    await setQuickPin(pin);
+    await setQuickAsked(true);
+    setState((s) => ({ ...s, quickUnlockEnabled: true, needsQuickUnlockSetup: false }));
+  }, []);
+
+  const removeQuickPin = useCallback(async () => {
+    await clearQuickPin();
+    setState((s) => ({ ...s, quickUnlockEnabled: false }));
+  }, []);
+
+  const setFingerprint = useCallback(async (enabled: boolean) => {
+    await setFingerprintEnabled(enabled);
+    await setQuickAsked(true);
+    setState((s) => ({ ...s, fingerprintEnabled: enabled, needsQuickUnlockSetup: false }));
+  }, []);
+
+  const setFace = useCallback(async (enabled: boolean) => {
+    await setFaceEnabled(enabled);
+    await setQuickAsked(true);
+    setState((s) => ({ ...s, faceEnabled: enabled, needsQuickUnlockSetup: false }));
   }, []);
 
   const skipQuickUnlock = useCallback(async () => {
@@ -281,14 +313,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((s) => ({
       ...s,
       quickUnlockEnabled: false,
-      biometricEnabled: false,
+      fingerprintEnabled: false,
+      faceEnabled: false,
     }));
   }, []);
 
   const unlockWithPin = useCallback(async (pin: string) => {
     const saved = await getQuickPin();
     if (!saved || saved !== pin) return false;
-    // Local check passed — promote to authenticated by fetching profile.
     try {
       const { user } = await authApi.me();
       setState((s) => ({
@@ -303,8 +335,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Promote a locked session to authenticated after the user proves identity
-  // (e.g. via biometric — the caller has already run LocalAuthentication).
   const approveUnlock = useCallback(async () => {
     const { user } = await authApi.me();
     setState((s) => ({
@@ -346,12 +376,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshMe,
       setUser,
       enableQuickUnlock,
-      setBiometric,
       skipQuickUnlock,
       disableQuickUnlock,
       unlockWithPin,
       approveUnlock,
       changePin,
+      setQuickPinValue,
+      removeQuickPin,
+      setFingerprint,
+      setFace,
     }),
     [
       state,
@@ -362,12 +395,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshMe,
       setUser,
       enableQuickUnlock,
-      setBiometric,
       skipQuickUnlock,
       disableQuickUnlock,
       unlockWithPin,
       approveUnlock,
       changePin,
+      setQuickPinValue,
+      removeQuickPin,
+      setFingerprint,
+      setFace,
     ]
   );
 

@@ -73,6 +73,7 @@
   },
   "quickUnlockSettings": {
     "title": "სწრაფი შესვლა",
+    "subtitle": "ჩართე ან გამორთე ყოველი მეთოდი ცალკე. გადასართავად საჭიროა იმავე მეთოდით დადასტურება.",
     "enabled": "სწრაფი შესვლა ჩართულია",
     "setupHint": "შეიყვანე 4-ციფრიანი PIN ჩასართავად",
     "pinSection": "PIN კოდი",
@@ -84,14 +85,17 @@
     "bioGeneric": "ბიომეტრიული",
     "bioOn": "ჩართულია",
     "bioOff": "გამორთულია",
+    "activeNow": "აქტიური ახლა",
+    "nothingOn": "არცერთი — შემდეგ ჯერზე პაროლი დაგჭირდება",
     "dangerSection": "სხვა",
     "disable": "სწრაფი შესვლის გამორთვა",
     "disableTitle": "გამორთვა",
     "disableConfirm": "გამოვრთო სწრაფი შესვლა? შემდეგ ჯერზე საჭირო იქნება პაროლი.",
+    "enterCurrentPinDisable": "შეიყვანე PIN გამოსართავად",
     "enterOldPin": "ძველი PIN",
     "enterNewPin": "ახალი PIN",
     "confirmNewPin": "გაიმეორე ახალი PIN",
-    "oldPinInvalid": "ძველი PIN არასწორია",
+    "oldPinInvalid": "PIN არასწორია",
     "changed": "PIN შეცვლილია"
   },
   "login": {

@@ -73,6 +73,7 @@
   },
   "quickUnlockSettings": {
     "title": "Quick sign-in",
+    "subtitle": "Toggle each method independently. Flipping a switch requires verifying with that method.",
     "enabled": "Quick sign-in is on",
     "setupHint": "Enter a 4-digit PIN to enable",
     "pinSection": "PIN",
@@ -84,14 +85,17 @@
     "bioGeneric": "Biometrics",
     "bioOn": "On",
     "bioOff": "Off",
+    "activeNow": "Active now",
+    "nothingOn": "Nothing — you'll need your password next time",
     "dangerSection": "Other",
     "disable": "Disable quick sign-in",
     "disableTitle": "Disable",
     "disableConfirm": "Turn off quick sign-in? Next time you'll need your password.",
+    "enterCurrentPinDisable": "Enter PIN to disable",
     "enterOldPin": "Current PIN",
     "enterNewPin": "New PIN",
     "confirmNewPin": "Confirm new PIN",
-    "oldPinInvalid": "Current PIN is incorrect",
+    "oldPinInvalid": "PIN is incorrect",
     "changed": "PIN updated"
   },
   "login": {

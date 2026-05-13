@@ -13,22 +13,27 @@ type Step = "intro" | "pin" | "pin-confirm" | "biometric";
 
 export default function SetupQuickUnlock() {
   const { t } = useTranslation();
-  const { enableQuickUnlock, skipQuickUnlock, setBiometric } = useAuth();
+  const { enableQuickUnlock, skipQuickUnlock, setFingerprint, setFace } = useAuth();
 
   const [step, setStep] = useState<Step>("intro");
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [bioAvailable, setBioAvailable] = useState(false);
+  const [hasFinger, setHasFinger] = useState(false);
+  const [hasFace, setHasFace] = useState(false);
+  const bioAvailable = hasFinger || hasFace;
 
   useEffect(() => {
     (async () => {
       if (Platform.OS === "web") return;
-      const [hardware, enrolled] = await Promise.all([
+      const [hardware, enrolled, types] = await Promise.all([
         LocalAuthentication.hasHardwareAsync(),
         LocalAuthentication.isEnrolledAsync(),
+        LocalAuthentication.supportedAuthenticationTypesAsync(),
       ]);
-      setBioAvailable(hardware && enrolled);
+      if (!hardware || !enrolled) return;
+      setHasFinger(types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT));
+      setHasFace(types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION));
     })();
   }, []);
 
@@ -100,15 +105,16 @@ export default function SetupQuickUnlock() {
           <BiometricStep
             onEnable={async () => {
               const res = await LocalAuthentication.authenticateAsync({
-                promptMessage: t("quickUnlock.biometricPrompt"),
+                promptMessage: t("quickUnlock.bioPrompt"),
                 cancelLabel: t("login.cancel"),
                 disableDeviceFallback: false,
               });
               if (res.success) {
-                await setBiometric(true);
+                if (hasFinger) await setFingerprint(true);
+                if (hasFace) await setFace(true);
               }
-              // Done either way — root navigator routes to tabs once
-              // needsQuickUnlockSetup is false (set when we enabled PIN).
+              // Either way root navigator routes to tabs because
+              // needsQuickUnlockSetup is already cleared.
             }}
             onSkip={() => {
               /* nothing to do — already authenticated */

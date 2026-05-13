@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -16,40 +17,26 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { Button } from "@/components/Button";
 import { PinDots, PinPad } from "@/components/PinPad";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { confirm } from "@/lib/confirm";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
-type ChangeStep = "old" | "new" | "confirm";
+type PinDialogMode = "enable" | "disable" | "change";
 
 export default function QuickUnlockSettings() {
   const router = useRouter();
   const { t } = useTranslation();
   const {
     quickUnlockEnabled,
-    biometricEnabled,
-    enableQuickUnlock,
-    setBiometric,
-    disableQuickUnlock,
+    fingerprintEnabled,
+    faceEnabled,
+    setQuickPinValue,
+    removeQuickPin,
     changePin,
+    setFingerprint,
+    setFace,
   } = useAuth();
 
-  // Setup-from-scratch state (when quickUnlockEnabled is false).
-  const [setupPin, setSetupPin] = useState("");
-  const [setupConfirm, setSetupConfirm] = useState("");
-  const [setupStep, setSetupStep] = useState<"new" | "confirm">("new");
-
-  // Change-PIN state.
-  const [changing, setChanging] = useState(false);
-  const [changeStep, setChangeStep] = useState<ChangeStep>("old");
-  const [oldPin, setOldPin] = useState("");
-  const [newPin, setNewPin] = useState("");
-  const [newPinConfirm, setNewPinConfirm] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  // Biometric hardware probe.
-  const [bioAvailable, setBioAvailable] = useState(false);
-  const [bioTypeLabel, setBioTypeLabel] = useState<string>("");
+  const [hasFinger, setHasFinger] = useState(false);
+  const [hasFace, setHasFace] = useState(false);
   useEffect(() => {
     (async () => {
       if (Platform.OS === "web") return;
@@ -58,124 +45,48 @@ export default function QuickUnlockSettings() {
         LocalAuthentication.isEnrolledAsync(),
         LocalAuthentication.supportedAuthenticationTypesAsync(),
       ]);
-      setBioAvailable(hardware && enrolled);
-      const hasFace = types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
-      const hasFinger = types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT);
-      if (hasFace && hasFinger) setBioTypeLabel(t("quickUnlockSettings.bioFaceFingerprint"));
-      else if (hasFace) setBioTypeLabel(t("quickUnlockSettings.bioFace"));
-      else if (hasFinger) setBioTypeLabel(t("quickUnlockSettings.bioFingerprint"));
-      else setBioTypeLabel(t("quickUnlockSettings.bioGeneric"));
+      if (!hardware || !enrolled) return;
+      setHasFinger(types.includes(LocalAuthentication.AuthenticationType.FINGERPRINT));
+      setHasFace(types.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION));
     })();
-  }, [t]);
+  }, []);
 
-  // Auto-advance setup steps
-  useEffect(() => {
-    if (setupStep === "new" && setupPin.length === 4) {
-      setSetupStep("confirm");
-      setError(null);
-    }
-  }, [setupStep, setupPin]);
+  // Modal state for PIN-verification dialogs.
+  const [pinDialog, setPinDialog] = useState<PinDialogMode | null>(null);
 
-  useEffect(() => {
-    if (setupStep === "confirm" && setupConfirm.length === 4) {
-      if (setupConfirm !== setupPin) {
-        setError(t("quickUnlock.mismatch"));
-        setTimeout(() => {
-          setSetupPin("");
-          setSetupConfirm("");
-          setSetupStep("new");
-          setError(null);
-        }, 1500);
-        return;
-      }
-      (async () => {
-        await enableQuickUnlock(setupPin);
-        setSetupPin("");
-        setSetupConfirm("");
-      })();
-    }
-  }, [setupStep, setupConfirm, setupPin, enableQuickUnlock, t]);
-
-  // Change-PIN advance
-  useEffect(() => {
-    if (!changing) return;
-    if (changeStep === "old" && oldPin.length === 4) {
-      // verify by attempting changePin in last step; here just advance.
-      setChangeStep("new");
-      setError(null);
-    }
-  }, [changing, changeStep, oldPin]);
-
-  useEffect(() => {
-    if (!changing) return;
-    if (changeStep === "new" && newPin.length === 4) {
-      setChangeStep("confirm");
-      setError(null);
-    }
-  }, [changing, changeStep, newPin]);
-
-  useEffect(() => {
-    if (!changing) return;
-    if (changeStep === "confirm" && newPinConfirm.length === 4) {
-      if (newPinConfirm !== newPin) {
-        setError(t("quickUnlock.mismatch"));
-        setTimeout(() => {
-          setNewPinConfirm("");
-          setChangeStep("new");
-          setNewPin("");
-          setError(null);
-        }, 1500);
-        return;
-      }
-      (async () => {
-        const ok = await changePin(oldPin, newPin);
-        if (!ok) {
-          setError(t("quickUnlockSettings.oldPinInvalid"));
-          setTimeout(() => {
-            setChanging(false);
-            setOldPin("");
-            setNewPin("");
-            setNewPinConfirm("");
-            setError(null);
-          }, 1800);
-          return;
-        }
-        setSuccess(true);
-        setTimeout(() => {
-          setChanging(false);
-          setSuccess(false);
-          setOldPin("");
-          setNewPin("");
-          setNewPinConfirm("");
-          setChangeStep("old");
-        }, 1200);
-      })();
-    }
-  }, [changing, changeStep, newPinConfirm, newPin, oldPin, changePin, t]);
-
-  const handleDisable = async () => {
-    const ok = await confirm({
-      title: t("quickUnlockSettings.disableTitle"),
-      body: t("quickUnlockSettings.disableConfirm"),
-      confirmLabel: t("quickUnlockSettings.disable"),
-      cancelLabel: t("profile.cancel"),
-      destructive: true,
+  const runBiometric = async (): Promise<boolean> => {
+    const res = await LocalAuthentication.authenticateAsync({
+      promptMessage: t("quickUnlock.bioPrompt"),
+      cancelLabel: t("login.cancel"),
+      disableDeviceFallback: false,
     });
-    if (ok) await disableQuickUnlock();
+    return !!res.success;
   };
 
-  const handleBioToggle = async (next: boolean) => {
+  const onPinToggle = async (next: boolean) => {
     if (next) {
-      const res = await LocalAuthentication.authenticateAsync({
-        promptMessage: t("quickUnlock.bioPrompt"),
-        cancelLabel: t("login.cancel"),
-        disableDeviceFallback: false,
-      });
-      if (res.success) await setBiometric(true);
+      setPinDialog("enable");
     } else {
-      await setBiometric(false);
+      setPinDialog("disable");
     }
   };
+
+  const onFingerprintToggle = async (next: boolean) => {
+    if (Platform.OS === "web") return;
+    const ok = await runBiometric();
+    if (ok) await setFingerprint(next);
+  };
+
+  const onFaceToggle = async (next: boolean) => {
+    if (Platform.OS === "web") return;
+    const ok = await runBiometric();
+    if (ok) await setFace(next);
+  };
+
+  const activeLabels: string[] = [];
+  if (quickUnlockEnabled) activeLabels.push(t("quickUnlockSettings.pinSection"));
+  if (fingerprintEnabled) activeLabels.push(t("quickUnlockSettings.bioFingerprint"));
+  if (faceEnabled) activeLabels.push(t("quickUnlockSettings.bioFace"));
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
@@ -188,185 +99,256 @@ export default function QuickUnlockSettings() {
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
-        {!quickUnlockEnabled && !changing && (
-          <View style={styles.heroCard}>
-            <View style={styles.heroIcon}>
-              <Ionicons name="flash-outline" size={26} color={colors.primary} />
-            </View>
-            <Text style={styles.heroTitle}>{t("quickUnlock.introTitle")}</Text>
-            <Text style={styles.heroSubtitle}>{t("quickUnlock.introSubtitle")}</Text>
-            <Text style={styles.heroHint}>{t("quickUnlockSettings.setupHint")}</Text>
-            <View style={styles.pinArea}>
-              <PinDots
-                length={4}
-                filled={setupStep === "new" ? setupPin.length : setupConfirm.length}
-                error={!!error}
-              />
-              <Text style={styles.muted}>
-                {setupStep === "new"
-                  ? t("quickUnlock.pinSetupTitle")
-                  : t("quickUnlock.pinConfirmTitle")}
-              </Text>
-              {error && <Text style={styles.errorText}>{error}</Text>}
-            </View>
-            <PinPad
-              value={setupStep === "new" ? setupPin : setupConfirm}
-              onChange={(v) => (setupStep === "new" ? setSetupPin(v) : setSetupConfirm(v))}
-            />
-          </View>
-        )}
+        <Text style={styles.subtitle}>{t("quickUnlockSettings.subtitle")}</Text>
 
-        {quickUnlockEnabled && !changing && (
-          <>
-            <View style={styles.statusBanner}>
-              <Ionicons name="checkmark-circle" size={22} color={colors.success} />
-              <Text style={styles.statusText}>{t("quickUnlockSettings.enabled")}</Text>
-            </View>
+        <View style={styles.list}>
+          <ToggleRow
+            icon="keypad-outline"
+            title={t("quickUnlockSettings.pinSection")}
+            sub={
+              quickUnlockEnabled
+                ? t("quickUnlockSettings.bioOn")
+                : t("quickUnlockSettings.bioOff")
+            }
+            value={quickUnlockEnabled}
+            onValueChange={onPinToggle}
+          />
 
-            <Section title={t("quickUnlockSettings.pinSection")}>
-              <Row
-                icon="keypad-outline"
-                label={t("quickUnlockSettings.changePin")}
-                onPress={() => {
-                  setChanging(true);
-                  setChangeStep("old");
-                  setError(null);
-                }}
-              />
-            </Section>
-
-            {bioAvailable && (
-              <Section title={t("quickUnlockSettings.bioSection")}>
-                <View style={styles.row}>
-                  <Ionicons name="finger-print-outline" size={20} color={colors.text} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.rowLabel}>{bioTypeLabel}</Text>
-                    <Text style={styles.rowSub}>
-                      {biometricEnabled
-                        ? t("quickUnlockSettings.bioOn")
-                        : t("quickUnlockSettings.bioOff")}
-                    </Text>
-                  </View>
-                  <Switch
-                    value={biometricEnabled}
-                    onValueChange={handleBioToggle}
-                    trackColor={{ true: colors.primary, false: colors.border }}
-                    thumbColor={colors.text}
-                  />
-                </View>
-              </Section>
-            )}
-
-            <Section title={t("quickUnlockSettings.dangerSection")}>
-              <Row
-                icon="close-circle-outline"
-                label={t("quickUnlockSettings.disable")}
-                destructive
-                onPress={handleDisable}
-              />
-            </Section>
-          </>
-        )}
-
-        {changing && (
-          <View style={styles.heroCard}>
-            <Text style={styles.heroTitle}>
-              {changeStep === "old"
-                ? t("quickUnlockSettings.enterOldPin")
-                : changeStep === "new"
-                ? t("quickUnlockSettings.enterNewPin")
-                : t("quickUnlockSettings.confirmNewPin")}
-            </Text>
-            <View style={styles.pinArea}>
-              <PinDots
-                length={4}
-                filled={
-                  changeStep === "old"
-                    ? oldPin.length
-                    : changeStep === "new"
-                    ? newPin.length
-                    : newPinConfirm.length
-                }
-                error={!!error}
-              />
-              {error && <Text style={styles.errorText}>{error}</Text>}
-              {success && (
-                <Text style={[styles.muted, { color: colors.success }]}>
-                  {t("quickUnlockSettings.changed")}
-                </Text>
-              )}
-            </View>
-            <PinPad
-              value={
-                changeStep === "old"
-                  ? oldPin
-                  : changeStep === "new"
-                  ? newPin
-                  : newPinConfirm
+          {hasFinger && (
+            <ToggleRow
+              icon="finger-print-outline"
+              title={t("quickUnlockSettings.bioFingerprint")}
+              sub={
+                fingerprintEnabled
+                  ? t("quickUnlockSettings.bioOn")
+                  : t("quickUnlockSettings.bioOff")
               }
-              onChange={(v) => {
-                if (changeStep === "old") setOldPin(v);
-                else if (changeStep === "new") setNewPin(v);
-                else setNewPinConfirm(v);
-              }}
+              value={fingerprintEnabled}
+              onValueChange={onFingerprintToggle}
             />
-            <View style={{ marginTop: spacing.lg }}>
-              <Button
-                label={t("profile.cancel")}
-                variant="secondary"
-                onPress={() => {
-                  setChanging(false);
-                  setOldPin("");
-                  setNewPin("");
-                  setNewPinConfirm("");
-                  setChangeStep("old");
-                  setError(null);
-                }}
-              />
-            </View>
-          </View>
+          )}
+
+          {hasFace && (
+            <ToggleRow
+              icon="happy-outline"
+              title={t("quickUnlockSettings.bioFace")}
+              sub={
+                faceEnabled
+                  ? t("quickUnlockSettings.bioOn")
+                  : t("quickUnlockSettings.bioOff")
+              }
+              value={faceEnabled}
+              onValueChange={onFaceToggle}
+            />
+          )}
+        </View>
+
+        {quickUnlockEnabled && (
+          <Pressable
+            onPress={() => setPinDialog("change")}
+            style={({ pressed }) => [styles.changeRow, pressed && { opacity: 0.85 }]}
+          >
+            <Ionicons name="key-outline" size={18} color={colors.primary} />
+            <Text style={styles.changeRowText}>{t("quickUnlockSettings.changePin")}</Text>
+          </Pressable>
         )}
+
+        <View style={styles.activeCard}>
+          <Text style={styles.activeLabel}>{t("quickUnlockSettings.activeNow")}</Text>
+          <Text style={styles.activeValue}>
+            {activeLabels.length > 0
+              ? activeLabels.join(" · ")
+              : t("quickUnlockSettings.nothingOn")}
+          </Text>
+        </View>
       </ScrollView>
+
+      {pinDialog && (
+        <PinDialog
+          mode={pinDialog}
+          onClose={() => setPinDialog(null)}
+          onEnable={async (newPin) => {
+            await setQuickPinValue(newPin);
+            setPinDialog(null);
+          }}
+          onDisable={async () => {
+            await removeQuickPin();
+            setPinDialog(null);
+          }}
+          onChange={async (oldPin, newPin) => {
+            return changePin(oldPin, newPin);
+          }}
+          onChangeDone={() => setPinDialog(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function ToggleRow({
+  icon,
+  title,
+  sub,
+  value,
+  onValueChange,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  sub: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+}) {
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionLabel}>{title}</Text>
-      {children}
+    <View style={styles.row}>
+      <Ionicons name={icon} size={22} color={colors.text} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        <Text style={styles.rowSub}>{sub}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ true: colors.primary, false: colors.border }}
+        thumbColor={colors.text}
+      />
     </View>
   );
 }
 
-function Row({
-  icon,
-  label,
-  onPress,
-  destructive,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress?: () => void;
-  destructive?: boolean;
-}) {
-  const color = destructive ? colors.danger : colors.text;
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-    >
-      <Ionicons name={icon} size={20} color={color} />
-      <Text style={[styles.rowLabel, { color }]}>{label}</Text>
-      <Ionicons
-        name="chevron-forward"
-        size={18}
-        color={destructive ? colors.danger : colors.textDim}
-        style={{ marginLeft: "auto" }}
-      />
-    </Pressable>
+type PinDialogProps = {
+  mode: PinDialogMode;
+  onClose: () => void;
+  onEnable: (pin: string) => Promise<void>;
+  onDisable: () => Promise<void>;
+  onChange: (oldPin: string, newPin: string) => Promise<boolean>;
+  onChangeDone: () => void;
+};
+
+function PinDialog({ mode, onClose, onEnable, onDisable, onChange, onChangeDone }: PinDialogProps) {
+  const { t } = useTranslation();
+  const { unlockWithPinLocally } = useUnlockHelper();
+
+  const [step, setStep] = useState<"current" | "new" | "confirm">(
+    mode === "enable" ? "new" : mode === "disable" ? "current" : "current"
   );
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirmVal] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (step !== "current" || mode !== "disable") return;
+    if (current.length !== 4) return;
+    (async () => {
+      const ok = await unlockWithPinLocally(current);
+      if (!ok) {
+        setError(t("quickUnlockSettings.oldPinInvalid"));
+        setTimeout(() => {
+          setCurrent("");
+          setError(null);
+        }, 1300);
+        return;
+      }
+      await onDisable();
+    })();
+  }, [step, mode, current, onDisable, t]);
+
+  useEffect(() => {
+    if (mode !== "change") return;
+    if (step !== "current" || current.length !== 4) return;
+    (async () => {
+      const ok = await unlockWithPinLocally(current);
+      if (!ok) {
+        setError(t("quickUnlockSettings.oldPinInvalid"));
+        setTimeout(() => {
+          setCurrent("");
+          setError(null);
+        }, 1300);
+        return;
+      }
+      setError(null);
+      setStep("new");
+    })();
+  }, [mode, step, current, t]);
+
+  useEffect(() => {
+    if (step !== "new" || next.length !== 4) return;
+    setStep("confirm");
+    setError(null);
+  }, [step, next]);
+
+  useEffect(() => {
+    if (step !== "confirm" || confirm.length !== 4) return;
+    if (confirm !== next) {
+      setError(t("quickUnlock.mismatch"));
+      setTimeout(() => {
+        setConfirmVal("");
+        setNext("");
+        setStep("new");
+        setError(null);
+      }, 1300);
+      return;
+    }
+    (async () => {
+      if (mode === "enable") {
+        await onEnable(next);
+      } else if (mode === "change") {
+        const ok = await onChange(current, next);
+        if (ok) onChangeDone();
+      }
+    })();
+  }, [step, confirm, next, mode, current, onEnable, onChange, onChangeDone, t]);
+
+  const heading =
+    mode === "enable"
+      ? step === "new"
+        ? t("quickUnlock.pinSetupTitle")
+        : t("quickUnlock.pinConfirmTitle")
+      : mode === "disable"
+      ? t("quickUnlockSettings.enterCurrentPinDisable")
+      : step === "current"
+      ? t("quickUnlockSettings.enterOldPin")
+      : step === "new"
+      ? t("quickUnlockSettings.enterNewPin")
+      : t("quickUnlockSettings.confirmNewPin");
+
+  const value =
+    step === "current" ? current : step === "new" ? next : confirm;
+  const setter =
+    step === "current" ? setCurrent : step === "new" ? setNext : setConfirmVal;
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.backdrop}>
+        <View style={styles.dialog}>
+          <View style={styles.dialogHead}>
+            <Text style={styles.dialogTitle}>{heading}</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Ionicons name="close" size={22} color={colors.textMuted} />
+            </Pressable>
+          </View>
+          <View style={{ alignItems: "center", gap: spacing.md, marginVertical: spacing.md }}>
+            <PinDots length={4} filled={value.length} error={!!error} />
+            {error && <Text style={styles.errorText}>{error}</Text>}
+          </View>
+          <PinPad value={value} onChange={setter} />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// Internal helper to verify current PIN locally without flipping auth state.
+function useUnlockHelper() {
+  const { changePin } = useAuth();
+  return {
+    unlockWithPinLocally: async (pin: string) => {
+      // We don't want to actually change anything; abuse changePin by
+      // passing newPin = pin → it succeeds only if the saved PIN matches.
+      // The PIN value remains unchanged.
+      return changePin(pin, pin);
+    },
+  };
 }
 
 const styles = StyleSheet.create({
@@ -381,60 +363,9 @@ const styles = StyleSheet.create({
   title: { flex: 1, color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
   body: { padding: spacing.xl, gap: spacing.lg, paddingBottom: spacing.xxl * 2 },
 
-  heroCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
-    alignItems: "center",
-  },
-  heroIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.primaryMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroTitle: {
-    color: colors.text,
-    fontSize: fontSize.xl,
-    fontWeight: "800",
-    textAlign: "center",
-  },
-  heroSubtitle: { color: colors.textMuted, fontSize: fontSize.sm, textAlign: "center" },
-  heroHint: { color: colors.textDim, fontSize: fontSize.xs, textAlign: "center" },
+  subtitle: { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 },
 
-  pinArea: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md },
-  muted: { color: colors.textMuted, fontSize: fontSize.sm },
-  errorText: { color: colors.danger, fontSize: fontSize.sm },
-
-  statusBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.success + "15",
-    borderWidth: 1,
-    borderColor: colors.success + "40",
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  statusText: { color: colors.success, fontSize: fontSize.md, fontWeight: "600" },
-
-  section: { gap: spacing.xs },
-  sectionLabel: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    paddingHorizontal: spacing.xs,
-    marginBottom: spacing.xs,
-  },
+  list: { gap: spacing.sm },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -445,6 +376,59 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  rowLabel: { fontSize: fontSize.md, fontWeight: "500", color: colors.text },
-  rowSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+  rowSub: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
+
+  changeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.primaryMuted,
+  },
+  changeRowText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: "700" },
+
+  activeCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  activeLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  activeValue: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+
+  errorText: { color: colors.danger, fontSize: fontSize.sm },
+
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  dialog: {
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  dialogHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: spacing.sm,
+  },
+  dialogTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
 });

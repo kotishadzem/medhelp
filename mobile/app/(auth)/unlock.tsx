@@ -11,21 +11,19 @@ import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 export default function Unlock() {
   const { t } = useTranslation();
-  const { storedIdentifier, biometricEnabled, unlockWithPin, approveUnlock, logout } = useAuth();
+  const {
+    storedIdentifier,
+    quickUnlockEnabled,
+    fingerprintEnabled,
+    faceEnabled,
+    unlockWithPin,
+    approveUnlock,
+    logout,
+  } = useAuth();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [bioReady, setBioReady] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS === "web" || !biometricEnabled) return;
-      const [hardware, enrolled] = await Promise.all([
-        LocalAuthentication.hasHardwareAsync(),
-        LocalAuthentication.isEnrolledAsync(),
-      ]);
-      setBioReady(hardware && enrolled);
-    })();
-  }, [biometricEnabled]);
+  const biometricEnabled = fingerprintEnabled || faceEnabled;
 
   const tryUnlock = useCallback(
     async (entered: string) => {
@@ -39,8 +37,8 @@ export default function Unlock() {
   );
 
   useEffect(() => {
-    if (pin.length === 4) tryUnlock(pin);
-  }, [pin, tryUnlock]);
+    if (quickUnlockEnabled && pin.length === 4) tryUnlock(pin);
+  }, [pin, quickUnlockEnabled, tryUnlock]);
 
   const tryBiometric = useCallback(async () => {
     const res = await LocalAuthentication.authenticateAsync({
@@ -59,8 +57,8 @@ export default function Unlock() {
 
   // Auto-prompt biometric once on mount if enabled.
   useEffect(() => {
-    if (bioReady) tryBiometric();
-  }, [bioReady, tryBiometric]);
+    if (Platform.OS !== "web" && biometricEnabled) tryBiometric();
+  }, [biometricEnabled, tryBiometric]);
 
   const display = !storedIdentifier
     ? ""
@@ -79,33 +77,58 @@ export default function Unlock() {
           <Text style={styles.phone}>{display}</Text>
         </View>
 
-        <View style={styles.center}>
-          <PinDots length={4} filled={pin.length} error={!!error} />
-          {error ? (
-            <Text style={styles.errorText}>{error}</Text>
-          ) : (
-            <Text style={styles.muted}>{t("unlock.enterPin")}</Text>
-          )}
-        </View>
-
-        <View style={styles.padArea}>
-          <PinPad value={pin} onChange={setPin} />
-
-          <View style={styles.actions}>
-            {bioReady && (
+        {quickUnlockEnabled ? (
+          <>
+            <View style={styles.center}>
+              <PinDots length={4} filled={pin.length} error={!!error} />
+              {error ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : (
+                <Text style={styles.muted}>{t("unlock.enterPin")}</Text>
+              )}
+            </View>
+            <View style={styles.padArea}>
+              <PinPad value={pin} onChange={setPin} />
+              <View style={styles.actions}>
+                {biometricEnabled && Platform.OS !== "web" && (
+                  <Pressable
+                    onPress={tryBiometric}
+                    hitSlop={10}
+                    style={({ pressed }) => [styles.bioBtn, pressed && { opacity: 0.7 }]}
+                  >
+                    <Ionicons
+                      name={faceEnabled ? "happy-outline" : "finger-print"}
+                      size={22}
+                      color={colors.primary}
+                    />
+                  </Pressable>
+                )}
+                <Pressable onPress={() => logout()} hitSlop={10}>
+                  <Text style={styles.linkAction}>{t("unlock.usePassword")}</Text>
+                </Pressable>
+              </View>
+            </View>
+          </>
+        ) : (
+          // PIN disabled but biometric enabled → just a big button + fallback.
+          <View style={styles.padArea}>
+            {biometricEnabled && Platform.OS !== "web" && (
               <Pressable
                 onPress={tryBiometric}
-                hitSlop={10}
-                style={({ pressed }) => [styles.bioBtn, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.bigBio, pressed && { opacity: 0.85 }]}
               >
-                <Ionicons name="finger-print" size={22} color={colors.primary} />
+                <Ionicons
+                  name={faceEnabled ? "happy" : "finger-print"}
+                  size={48}
+                  color={colors.bg}
+                />
               </Pressable>
             )}
             <Pressable onPress={() => logout()} hitSlop={10}>
               <Text style={styles.linkAction}>{t("unlock.usePassword")}</Text>
             </Pressable>
           </View>
-        </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -145,6 +168,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bigBio: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
