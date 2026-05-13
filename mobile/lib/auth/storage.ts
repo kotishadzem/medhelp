@@ -2,8 +2,10 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
 const REFRESH_TOKEN_KEY = "medhelp.refreshToken";
-const IDENTIFIER_KEY = "medhelp.identifier"; // JSON: { method: 'phone'|'email', value: string }
-const BIOMETRIC_ENABLED_KEY = "medhelp.biometricEnabled";
+const IDENTIFIER_KEY = "medhelp.identifier";
+const QUICK_PIN_KEY = "medhelp.quickUnlock.pin";
+const QUICK_ASKED_KEY = "medhelp.quickUnlock.asked";
+const QUICK_BIOMETRIC_KEY = "medhelp.quickUnlock.biometric";
 
 const webStore = {
   getItemAsync: async (key: string) =>
@@ -23,11 +25,9 @@ export type StoredIdentifier = { method: "phone" | "email"; value: string };
 export async function getStoredRefreshToken(): Promise<string | null> {
   return store.getItemAsync(REFRESH_TOKEN_KEY);
 }
-
 export async function setStoredRefreshToken(token: string): Promise<void> {
   await store.setItemAsync(REFRESH_TOKEN_KEY, token);
 }
-
 export async function clearStoredRefreshToken(): Promise<void> {
   await store.deleteItemAsync(REFRESH_TOKEN_KEY);
 }
@@ -45,20 +45,45 @@ export async function getStoredIdentifier(): Promise<StoredIdentifier | null> {
   }
   return null;
 }
-
 export async function setStoredIdentifier(id: StoredIdentifier): Promise<void> {
   await store.setItemAsync(IDENTIFIER_KEY, JSON.stringify(id));
 }
-
 export async function clearStoredIdentifier(): Promise<void> {
   await store.deleteItemAsync(IDENTIFIER_KEY);
 }
 
-export async function getBiometricEnabled(): Promise<boolean> {
-  const v = await store.getItemAsync(BIOMETRIC_ENABLED_KEY);
-  return v === "true";
+// Quick unlock — PIN is stored as plain text in OS-protected secure storage
+// (SecureStore on native, localStorage fallback on web). On native the OS
+// keychain encrypts at rest; on web it's only as safe as the browser.
+
+export async function getQuickPin(): Promise<string | null> {
+  return store.getItemAsync(QUICK_PIN_KEY);
+}
+export async function setQuickPin(pin: string): Promise<void> {
+  await store.setItemAsync(QUICK_PIN_KEY, pin);
+}
+export async function clearQuickPin(): Promise<void> {
+  await store.deleteItemAsync(QUICK_PIN_KEY);
 }
 
+export async function getQuickAsked(): Promise<boolean> {
+  return (await store.getItemAsync(QUICK_ASKED_KEY)) === "true";
+}
+export async function setQuickAsked(asked: boolean): Promise<void> {
+  await store.setItemAsync(QUICK_ASKED_KEY, asked ? "true" : "false");
+}
+
+export async function getBiometricEnabled(): Promise<boolean> {
+  return (await store.getItemAsync(QUICK_BIOMETRIC_KEY)) === "true";
+}
 export async function setBiometricEnabled(enabled: boolean): Promise<void> {
-  await store.setItemAsync(BIOMETRIC_ENABLED_KEY, enabled ? "true" : "false");
+  await store.setItemAsync(QUICK_BIOMETRIC_KEY, enabled ? "true" : "false");
+}
+
+export async function clearQuickUnlock(): Promise<void> {
+  await Promise.all([
+    clearQuickPin(),
+    store.deleteItemAsync(QUICK_BIOMETRIC_KEY),
+    store.deleteItemAsync(QUICK_ASKED_KEY),
+  ]);
 }

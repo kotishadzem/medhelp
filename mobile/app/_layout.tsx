@@ -33,11 +33,11 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { status } = useAuth();
+  const { status, needsQuickUnlockSetup } = useAuth();
 
   if (status === "loading") return <SplashView />;
 
-  const isAuthed = status === "authenticated";
+  const readyForApp = status === "authenticated" && !needsQuickUnlockSetup;
 
   return (
     <Stack
@@ -47,10 +47,10 @@ function RootNavigator() {
         animation: "fade",
       }}
     >
-      <Stack.Protected guard={isAuthed}>
+      <Stack.Protected guard={readyForApp}>
         <Stack.Screen name="(tabs)" />
       </Stack.Protected>
-      <Stack.Protected guard={!isAuthed}>
+      <Stack.Protected guard={!readyForApp}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>

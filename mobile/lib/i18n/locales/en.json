@@ -45,6 +45,32 @@
       "network": "Network error — please try again"
     }
   },
+  "quickUnlock": {
+    "introTitle": "Quick sign-in",
+    "introSubtitle": "Next time you open the app, jump straight in with a PIN or your fingerprint / Face ID.",
+    "bulletPin": "4-digit PIN",
+    "bulletFingerprint": "Fingerprint",
+    "bulletFace": "Face recognition",
+    "enable": "Enable",
+    "skip": "Skip",
+    "pinSetupTitle": "Set a PIN",
+    "pinSetupSubtitle": "4-digit code to unlock the app",
+    "pinConfirmTitle": "Confirm your PIN",
+    "pinConfirmSubtitle": "One more time — to confirm",
+    "mismatch": "PINs don't match",
+    "bioTitle": "Biometric unlock",
+    "bioSubtitle": "Use your fingerprint or Face ID instead of typing the PIN",
+    "bioPrompt": "Sign in to MedHelp",
+    "bioEnable": "Enable biometrics",
+    "bioSkip": "PIN only"
+  },
+  "unlock": {
+    "greeting": "Welcome back",
+    "enterPin": "Enter your PIN",
+    "invalid": "Incorrect PIN",
+    "failed": "Couldn't unlock",
+    "usePassword": "Use password instead"
+  },
   "login": {
     "title": "Sign in",
     "subtitle": "Enter your number or email and password.",

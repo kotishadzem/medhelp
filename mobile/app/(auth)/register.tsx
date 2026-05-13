@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/Button";
@@ -77,6 +77,10 @@ export default function Register() {
     setLoading(true);
     try {
       await register(currentIdentifier(), password);
+      // Auth state flips to authenticated + needsQuickUnlockSetup.
+      // Stack initialRouteName only applies on first mount, so push the
+      // setup screen explicitly.
+      router.replace("/(auth)/setup-quick-unlock" as Href);
     } catch (e) {
       if (e instanceof ApiError && e.code === "ALREADY_REGISTERED") {
         setError(t("register.alreadyRegistered"));

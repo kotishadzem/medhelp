@@ -45,6 +45,32 @@
       "network": "Netzwerkfehler — bitte erneut versuchen"
     }
   },
+  "quickUnlock": {
+    "introTitle": "Schnellanmeldung",
+    "introSubtitle": "Beim nächsten Start direkt mit PIN oder Fingerabdruck / Face ID einsteigen.",
+    "bulletPin": "4-stellige PIN",
+    "bulletFingerprint": "Fingerabdruck",
+    "bulletFace": "Gesichtserkennung",
+    "enable": "Aktivieren",
+    "skip": "Überspringen",
+    "pinSetupTitle": "PIN festlegen",
+    "pinSetupSubtitle": "4-stelliger Code zum Entsperren",
+    "pinConfirmTitle": "PIN bestätigen",
+    "pinConfirmSubtitle": "Bitte noch einmal — zur Bestätigung",
+    "mismatch": "PINs stimmen nicht überein",
+    "bioTitle": "Biometrische Entsperrung",
+    "bioSubtitle": "Fingerabdruck oder Face ID statt PIN",
+    "bioPrompt": "Bei MedHelp anmelden",
+    "bioEnable": "Biometrie aktivieren",
+    "bioSkip": "Nur PIN"
+  },
+  "unlock": {
+    "greeting": "Willkommen zurück",
+    "enterPin": "PIN eingeben",
+    "invalid": "PIN falsch",
+    "failed": "Entsperren fehlgeschlagen",
+    "usePassword": "Mit Passwort anmelden"
+  },
   "login": {
     "title": "Anmelden",
     "subtitle": "Gib Nummer oder E-Mail und Passwort ein.",

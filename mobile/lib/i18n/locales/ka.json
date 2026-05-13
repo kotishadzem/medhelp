@@ -45,6 +45,32 @@
       "network": "ქსელის შეცდომა — სცადე თავიდან"
     }
   },
+  "quickUnlock": {
+    "introTitle": "სწრაფი შესვლა",
+    "introSubtitle": "შემდეგ ჯერზე გადადი მთავარ ეკრანზე PIN-ით ან თითის ანაბეჭდით / Face-ით.",
+    "bulletPin": "4-ციფრიანი PIN",
+    "bulletFingerprint": "თითის ანაბეჭდი",
+    "bulletFace": "სახის ამოცნობა",
+    "enable": "ჩართე",
+    "skip": "გამოტოვება",
+    "pinSetupTitle": "დააყენე PIN",
+    "pinSetupSubtitle": "4-ციფრიანი კოდი მთავარ ეკრანზე გადასასვლელად",
+    "pinConfirmTitle": "გაიმეორე PIN",
+    "pinConfirmSubtitle": "ერთხელ კიდევ — დასადასტურებლად",
+    "mismatch": "PIN-ები არ ემთხვევა",
+    "bioTitle": "ბიომეტრიული შესვლა",
+    "bioSubtitle": "თითის ანაბეჭდი ან Face ID PIN-ის ნაცვლად",
+    "bioPrompt": "MedHelp-ში შესასვლელად",
+    "bioEnable": "ჩართე ბიომეტრია",
+    "bioSkip": "მხოლოდ PIN-ით"
+  },
+  "unlock": {
+    "greeting": "კეთილი დაბრუნება",
+    "enterPin": "შეიყვანე PIN",
+    "invalid": "PIN არასწორია",
+    "failed": "შესვლა ვერ მოხერხდა",
+    "usePassword": "პაროლით შესვლა"
+  },
   "login": {
     "title": "შესვლა",
     "subtitle": "შეიყვანე ნომერი ან ელფოსტა და პაროლი.",
