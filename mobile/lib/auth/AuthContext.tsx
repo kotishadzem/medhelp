@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { configureTokens } from "@/lib/api/client";
 import { authApi, type Identifier } from "@/lib/api/endpoints";
 import { cancelAll as cancelAllNotifications } from "@/lib/notifications";
@@ -46,6 +47,7 @@ function identifierFromUser(user: User): StoredIdentifier | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const accessTokenRef = useRef<string | null>(null);
   const refreshTokenRef = useRef<string | null>(null);
   const [state, setState] = useState<AuthState>({
@@ -67,12 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshTokenRef.current = null;
     await clearStoredRefreshToken();
     await cancelAllNotifications();
+    queryClient.clear();
     setState((s) => ({
       status: "unauthenticated",
       user: null,
       storedIdentifier: s.storedIdentifier,
     }));
-  }, []);
+  }, [queryClient]);
 
   useEffect(() => {
     configureTokens({
@@ -135,6 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setSession = useCallback(
     async (accessToken: string, refreshToken: string, user: User) => {
+      // New session → flush any cached data from the previous session before render.
+      queryClient.clear();
       accessTokenRef.current = accessToken;
       refreshTokenRef.current = refreshToken;
       await setStoredRefreshToken(refreshToken);
@@ -142,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (id) await setStoredIdentifier(id);
       setState({ status: "authenticated", user, storedIdentifier: id });
     },
-    []
+    [queryClient]
   );
 
   const loginWithPassword = useCallback(
