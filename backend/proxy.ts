@@ -5,6 +5,9 @@ const ALLOWED_ORIGINS = [
   "http://localhost:8082",
   "http://localhost:8083",
   "http://localhost:19006",
+  "http://192.168.0.104:8081",
+  "http://192.168.0.104:8082",
+  "http://192.168.0.104:8083",
 ];
 
 function corsHeaders(origin: string | null): Headers {
