@@ -12,13 +12,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { medicationsApi } from "@/lib/api/endpoints";
+import { familyApi, medicationsApi } from "@/lib/api/endpoints";
 import { Button } from "@/components/Button";
 import { addDaysYMD, dateInputToISO, todayYMD } from "@/lib/format";
 import { scheduleForMedication } from "@/lib/notifications";
+import type { FamilyLink, FamilyParty } from "@/lib/types";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 const DEFAULT_TIMES = ["08:00", "14:00", "20:00", "22:00"];
@@ -28,6 +29,12 @@ export default function CreateMedication() {
   const qc = useQueryClient();
   const { t } = useTranslation();
 
+  const familyQuery = useQuery({ queryKey: ["family"], queryFn: familyApi.list });
+  const acceptedFamily = (familyQuery.data?.outgoing ?? []).filter(
+    (l) => l.status === "ACCEPTED" && !!l.target
+  );
+
+  const [forUserId, setForUserId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -47,17 +54,21 @@ export default function CreateMedication() {
   const mutation = useMutation({
     mutationFn: async (input: Parameters<typeof medicationsApi.create>[0]) => {
       const created = await medicationsApi.create(input);
-      try {
-        const detail = await medicationsApi.detail(created.medication.id);
-        await scheduleForMedication(detail.medication, detail.medication.intakes);
-      } catch {
-        // notification scheduling is best-effort
+      // Only schedule local reminders when the medication is for the current user.
+      if (!input.forUserId) {
+        try {
+          const detail = await medicationsApi.detail(created.medication.id);
+          await scheduleForMedication(detail.medication, detail.medication.intakes);
+        } catch {
+          // best-effort
+        }
       }
       return created;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["medications"] });
       qc.invalidateQueries({ queryKey: ["today"] });
+      qc.invalidateQueries({ queryKey: ["family"] });
       router.back();
     },
     onError: (e) => {
@@ -85,6 +96,7 @@ export default function CreateMedication() {
       endDate: dateInputToISO(endYMD),
       frequencyPerDay: frequency,
       timesOfDay: times,
+      forUserId: forUserId ?? undefined,
     });
   };
 
@@ -103,6 +115,33 @@ export default function CreateMedication() {
         </View>
 
         <ScrollView contentContainerStyle={styles.body}>
+          {acceptedFamily.length > 0 && (
+            <Section title={t("medications.forWhom")}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.targetsRow}
+                style={styles.targetsScroll}
+              >
+                <TargetChip
+                  active={forUserId === null}
+                  label={t("medications.forMe")}
+                  iconChar="🙂"
+                  onPress={() => setForUserId(null)}
+                />
+                {acceptedFamily.map((link) => (
+                  <TargetChip
+                    key={link.id}
+                    active={forUserId === link.targetId}
+                    label={link.customName}
+                    iconChar={(link.customName.trim() || "?").charAt(0)}
+                    onPress={() => setForUserId(link.targetId)}
+                  />
+                ))}
+              </ScrollView>
+            </Section>
+          )}
+
           <Section title={t("medications.field.name")}>
             <Input
               value={name}
@@ -200,6 +239,36 @@ export default function CreateMedication() {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function TargetChip({
+  active,
+  label,
+  iconChar,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  iconChar: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.targetChip,
+        active && styles.targetChipActive,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <View style={[styles.targetAvatar, active && styles.targetAvatarActive]}>
+        <Text style={[styles.targetAvatarText, active && styles.targetAvatarTextActive]}>
+          {iconChar}
+        </Text>
+      </View>
+      <Text style={[styles.targetLabel, active && styles.targetLabelActive]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -367,4 +436,32 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
     backgroundColor: colors.bg,
   },
+
+  targetsScroll: { flexGrow: 0, flexShrink: 0 },
+  targetsRow: { gap: spacing.sm, paddingVertical: spacing.xs },
+  targetChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  targetChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  targetAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  targetAvatarActive: { backgroundColor: colors.bg },
+  targetAvatarText: { color: colors.text, fontSize: fontSize.sm, fontWeight: "700" },
+  targetAvatarTextActive: { color: colors.primary },
+  targetLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },
+  targetLabelActive: { color: colors.bg },
 });

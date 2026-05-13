@@ -12,6 +12,7 @@ export const createMedicationSchema = z.object({
   timesOfDay: z
     .array(z.string().regex(timeRegex, "Time must be in HH:MM format"))
     .min(1, "At least one time is required"),
+  forUserId: z.string().optional(),
 });
 
 export const updateMedicationSchema = z.object({

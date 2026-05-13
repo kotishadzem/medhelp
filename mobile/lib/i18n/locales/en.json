@@ -100,6 +100,8 @@
     "emptySubtitle": "Add a new medication — we'll plan its dose times and remind you.",
     "addButton": "Add medication",
     "newMedication": "New medication",
+    "forWhom": "For whom?",
+    "forMe": "Myself",
     "field": {
       "name": "Name",
       "namePlaceholder": "e.g. Amoxicillin",

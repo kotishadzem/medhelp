@@ -51,6 +51,7 @@ export type CreateMedicationInput = {
   endDate: string;
   frequencyPerDay: number;
   timesOfDay: string[];
+  forUserId?: string;
 };
 
 export type UpdateMedicationInput = {

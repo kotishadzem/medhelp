@@ -100,6 +100,8 @@
     "emptySubtitle": "Füge ein Medikament hinzu — wir planen Einnahmen und erinnern dich.",
     "addButton": "Medikament hinzufügen",
     "newMedication": "Neues Medikament",
+    "forWhom": "Für wen?",
+    "forMe": "Für mich",
     "field": {
       "name": "Name",
       "namePlaceholder": "z. B. Amoxicillin",

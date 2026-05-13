@@ -40,8 +40,16 @@ export async function POST(request: NextRequest) {
       return validationError(parsed.error.issues[0].message);
     }
 
-    const { name, dosage, instructions, startDate, endDate, frequencyPerDay, timesOfDay } =
-      parsed.data;
+    const {
+      name,
+      dosage,
+      instructions,
+      startDate,
+      endDate,
+      frequencyPerDay,
+      timesOfDay,
+      forUserId,
+    } = parsed.data;
 
     if (timesOfDay.length !== frequencyPerDay) {
       return validationError(
@@ -53,10 +61,26 @@ export async function POST(request: NextRequest) {
       return validationError("endDate must be after startDate");
     }
 
+    // Resolve owner: self by default; otherwise an accepted family link's target.
+    let ownerId = user.userId;
+    if (forUserId && forUserId !== user.userId) {
+      const link = await prisma.familyLink.findUnique({
+        where: { requesterId_targetId: { requesterId: user.userId, targetId: forUserId } },
+      });
+      if (!link || link.status !== "ACCEPTED") {
+        return error(
+          "Not authorized to add a medication for this user",
+          403,
+          "NOT_FAMILY"
+        );
+      }
+      ownerId = forUserId;
+    }
+
     // Create medication
     const medication = await prisma.medication.create({
       data: {
-        userId: user.userId,
+        userId: ownerId,
         name,
         dosage,
         instructions,
