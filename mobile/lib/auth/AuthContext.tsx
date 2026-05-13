@@ -55,6 +55,7 @@ type AuthContextValue = AuthState & {
   disableQuickUnlock: () => Promise<void>;
   unlockWithPin: (pin: string) => Promise<boolean>;
   approveUnlock: () => Promise<void>;
+  changePin: (oldPin: string, newPin: string) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -314,6 +315,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const changePin = useCallback(async (oldPin: string, newPin: string) => {
+    const saved = await getQuickPin();
+    if (!saved || saved !== oldPin) return false;
+    await setQuickPin(newPin);
+    return true;
+  }, []);
+
   const forgetIdentifier = useCallback(async () => {
     await clearStoredIdentifier();
     setState((s) => ({ ...s, storedIdentifier: null }));
@@ -343,6 +351,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       disableQuickUnlock,
       unlockWithPin,
       approveUnlock,
+      changePin,
     }),
     [
       state,
@@ -358,6 +367,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       disableQuickUnlock,
       unlockWithPin,
       approveUnlock,
+      changePin,
     ]
   );
 

@@ -147,6 +147,13 @@ export default function Profile() {
             onPress={() => router.push("/(tabs)/family/" as Href)}
           />
 
+          <Row
+            icon="flash-outline"
+            label={t("profile.quickSignIn")}
+            sublabel={t("profile.quickSignInSubtitle")}
+            onPress={() => router.push("/(tabs)/quick-unlock" as Href)}
+          />
+
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>{t("profile.appSection")}</Text>
             <Row
@@ -161,7 +168,6 @@ export default function Profile() {
               onPress={() => setShowLangPicker(true)}
             />
             <Row icon="notifications-outline" label={t("profile.notifications")} disabled />
-            <Row icon="lock-closed-outline" label={t("profile.changePin")} disabled />
           </View>
 
           <View style={styles.section}>
