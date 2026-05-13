@@ -20,17 +20,19 @@ import {
 } from "@/lib/notifications";
 import type { MedicationStatus } from "@/lib/types";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
+import { useTranslation } from "react-i18next";
 
-const STATUS_ACTIONS: { label: string; status: MedicationStatus }[] = [
-  { label: "შეჩერება", status: "PAUSED" },
-  { label: "გააქტიურება", status: "ACTIVE" },
-  { label: "დასრულება", status: "COMPLETED" },
+const STATUS_ACTIONS: { tKey: string; status: MedicationStatus }[] = [
+  { tKey: "medications.action.pause", status: "PAUSED" },
+  { tKey: "medications.action.activate", status: "ACTIVE" },
+  { tKey: "medications.action.complete", status: "COMPLETED" },
 ];
 
 export default function MedicationDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const { t } = useTranslation();
 
   const query = useQuery({
     queryKey: ["medications", "detail", id],
@@ -80,7 +82,7 @@ export default function MedicationDetail() {
   if (!m) {
     return (
       <SafeAreaView style={[styles.root, styles.center]}>
-        <Text style={styles.muted}>მედიკამენტი ვერ მოიძებნა</Text>
+        <Text style={styles.muted}>{t("medications.detail.notFound")}</Text>
       </SafeAreaView>
     );
   }
@@ -100,9 +102,13 @@ export default function MedicationDetail() {
         </Text>
         <Pressable
           onPress={() =>
-            Alert.alert("წაშლა", `წავშალო ${m.name}?`, [
-              { text: "გაუქმება", style: "cancel" },
-              { text: "წაშლა", style: "destructive", onPress: () => remove.mutate() },
+            Alert.alert(t("medications.delete.title"), t("medications.delete.confirm", { name: m.name }), [
+              { text: t("medications.delete.cancel"), style: "cancel" },
+              {
+                text: t("medications.delete.ok"),
+                style: "destructive",
+                onPress: () => remove.mutate(),
+              },
             ])
           }
           hitSlop={10}
@@ -121,18 +127,31 @@ export default function MedicationDetail() {
           {m.instructions && <Text style={styles.medInstructions}>{m.instructions}</Text>}
 
           <View style={styles.statsRow}>
-            <Stat label="გრაფიკი" value={`${m.frequencyPerDay}x/დღე`} />
-            <Stat label="დროები" value={m.timesOfDay.join(", ")} />
+            <Stat
+              label={t("medications.detail.schedule")}
+              value={t("medications.frequencyShort", { count: m.frequencyPerDay })}
+            />
+            <Stat label={t("medications.detail.times")} value={m.timesOfDay.join(", ")} />
           </View>
           <View style={styles.statsRow}>
-            <Stat label="დაწყება" value={formatDateShort(m.startDate)} />
-            <Stat label="დასრულება" value={formatDateShort(m.endDate)} />
+            <Stat label={t("medications.detail.startDate")} value={formatDateShort(m.startDate)} />
+            <Stat label={t("medications.detail.endDate")} value={formatDateShort(m.endDate)} />
           </View>
         </View>
 
         <View style={styles.statRow}>
-          <ProgressCard label="მიღებული" value={taken} total={total} tint={colors.success} />
-          <ProgressCard label="დარჩა" value={remaining} total={total} tint={colors.warning} />
+          <ProgressCard
+            label={t("medications.detail.taken")}
+            value={taken}
+            total={total}
+            tint={colors.success}
+          />
+          <ProgressCard
+            label={t("medications.detail.remaining")}
+            value={remaining}
+            total={total}
+            tint={colors.warning}
+          />
         </View>
 
         <View style={styles.actionsRow}>
@@ -142,13 +161,13 @@ export default function MedicationDetail() {
               onPress={() => updateStatus.mutate(a.status)}
               style={({ pressed }) => [styles.actionBtn, pressed && { opacity: 0.85 }]}
             >
-              <Text style={styles.actionText}>{a.label}</Text>
+              <Text style={styles.actionText}>{t(a.tKey)}</Text>
             </Pressable>
           ))}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>ისტორია</Text>
+          <Text style={styles.sectionTitle}>{t("medications.detail.history")}</Text>
           {m.intakes.slice(0, 30).map((i) => (
             <View key={i.id} style={styles.intakeRow}>
               <Text style={styles.intakeDate}>{formatDateShort(i.scheduledAt)}</Text>
@@ -159,7 +178,9 @@ export default function MedicationDetail() {
             </View>
           ))}
           {m.intakes.length > 30 && (
-            <Text style={styles.helper}>... ({m.intakes.length - 30} მეტი)</Text>
+            <Text style={styles.helper}>
+              {t("medications.detail.more", { count: m.intakes.length - 30 })}
+            </Text>
           )}
         </View>
       </ScrollView>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,17 +14,28 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { authApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/Button";
 import { formatPhoneForDisplay } from "@/lib/phone";
+import { changeLanguage, SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
+const FLAG: Record<Language, string> = { ka: "🇬🇪", en: "🇬🇧", de: "🇩🇪" };
+const NATIVE_NAMES: Record<Language, string> = {
+  ka: "ქართული",
+  en: "English",
+  de: "Deutsch",
+};
+
 export default function Profile() {
+  const { t, i18n } = useTranslation();
   const { user, logout, setUser } = useAuth();
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
+  const [showLangPicker, setShowLangPicker] = useState(false);
   const qc = useQueryClient();
 
   const save = useMutation({
@@ -38,13 +50,15 @@ export default function Profile() {
       qc.invalidateQueries({ queryKey: ["today"] });
     },
     onError: () => {
-      Alert.alert("შეცდომა", "ვერ შენახა — სცადე თავიდან");
+      Alert.alert(t("profile.edit.saveFailed"), t("profile.edit.saveFailedBody"));
     },
   });
 
   const initials =
     `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.trim() ||
-    (user?.phone?.slice(-2) ?? "👤");
+    (user?.phone?.slice(-2) ?? "?");
+
+  const currentLang = i18n.language as Language;
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
@@ -53,7 +67,7 @@ export default function Profile() {
         style={styles.flex}
       >
         <ScrollView contentContainerStyle={styles.body}>
-          <Text style={styles.pageTitle}>პროფილი</Text>
+          <Text style={styles.pageTitle}>{t("profile.title")}</Text>
 
           <View style={styles.identity}>
             <View style={styles.avatar}>
@@ -63,7 +77,7 @@ export default function Profile() {
               <Text style={styles.name}>
                 {user?.firstName || user?.lastName
                   ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
-                  : "უსახელო"}
+                  : t("profile.noName")}
               </Text>
               <Text style={styles.phone}>+995 {formatPhoneForDisplay(user?.phone ?? "")}</Text>
             </View>
@@ -71,15 +85,23 @@ export default function Profile() {
 
           {editing ? (
             <View style={styles.editCard}>
-              <Field label="სახელი">
-                <Input value={firstName} onChangeText={setFirstName} placeholder="სახელი" />
+              <Field label={t("profile.edit.firstName")}>
+                <Input
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder={t("profile.edit.firstNamePlaceholder")}
+                />
               </Field>
-              <Field label="გვარი">
-                <Input value={lastName} onChangeText={setLastName} placeholder="გვარი" />
+              <Field label={t("profile.edit.lastName")}>
+                <Input
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder={t("profile.edit.lastNamePlaceholder")}
+                />
               </Field>
               <View style={styles.editActions}>
                 <Button
-                  label="გაუქმება"
+                  label={t("profile.edit.cancel")}
                   variant="secondary"
                   onPress={() => {
                     setFirstName(user?.firstName ?? "");
@@ -89,7 +111,7 @@ export default function Profile() {
                   style={{ flex: 1 }}
                 />
                 <Button
-                  label="შენახვა"
+                  label={t("profile.edit.save")}
                   onPress={() => save.mutate()}
                   loading={save.isPending}
                   style={{ flex: 1 }}
@@ -99,32 +121,84 @@ export default function Profile() {
           ) : (
             <Row
               icon="create-outline"
-              label="სახელის შეცვლა"
+              label={t("profile.editName")}
               onPress={() => setEditing(true)}
             />
           )}
 
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>აპლიკაცია</Text>
-            <Row icon="notifications-outline" label="შეტყობინებები" disabled />
-            <Row icon="lock-closed-outline" label="PIN-ის შეცვლა" disabled />
+            <Text style={styles.sectionLabel}>{t("profile.appSection")}</Text>
+            <Row
+              icon="language-outline"
+              label={t("profile.language")}
+              right={
+                <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+                  <Text style={styles.flag}>{FLAG[currentLang]}</Text>
+                  <Text style={styles.rowValue}>{NATIVE_NAMES[currentLang]}</Text>
+                </View>
+              }
+              onPress={() => setShowLangPicker(true)}
+            />
+            <Row icon="notifications-outline" label={t("profile.notifications")} disabled />
+            <Row icon="lock-closed-outline" label={t("profile.changePin")} disabled />
           </View>
 
           <View style={styles.section}>
             <Row
               icon="log-out-outline"
-              label="გასვლა"
+              label={t("profile.logout")}
               destructive
               onPress={() =>
-                Alert.alert("გასვლა", "გნებავთ გასვლა?", [
-                  { text: "გაუქმება", style: "cancel" },
-                  { text: "გასვლა", style: "destructive", onPress: () => logout() },
+                Alert.alert(t("profile.logoutConfirmTitle"), t("profile.logoutConfirmBody"), [
+                  { text: t("profile.cancel"), style: "cancel" },
+                  { text: t("profile.logout"), style: "destructive", onPress: () => logout() },
                 ])
               }
             />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={showLangPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLangPicker(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowLangPicker(false)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>{t("profile.language")}</Text>
+            {SUPPORTED_LANGUAGES.map((lang) => {
+              const active = lang === currentLang;
+              return (
+                <Pressable
+                  key={lang}
+                  onPress={async () => {
+                    await changeLanguage(lang);
+                    setShowLangPicker(false);
+                  }}
+                  style={({ pressed }) => [
+                    styles.langRow,
+                    active && styles.langRowActive,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text style={styles.flag}>{FLAG[lang]}</Text>
+                  <Text style={styles.langName}>{NATIVE_NAMES[lang]}</Text>
+                  {active && (
+                    <Ionicons
+                      name="checkmark"
+                      size={20}
+                      color={colors.primary}
+                      style={{ marginLeft: "auto" }}
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -148,12 +222,14 @@ function Row({
   onPress,
   destructive,
   disabled,
+  right,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress?: () => void;
   destructive?: boolean;
   disabled?: boolean;
+  right?: React.ReactNode;
 }) {
   const color = destructive ? colors.danger : disabled ? colors.textDim : colors.text;
   return (
@@ -163,14 +239,17 @@ function Row({
     >
       <Ionicons name={icon} size={20} color={color} />
       <Text style={[styles.rowLabel, { color }]}>{label}</Text>
-      {!disabled && (
-        <Ionicons
-          name="chevron-forward"
-          size={18}
-          color={destructive ? colors.danger : colors.textDim}
-          style={{ marginLeft: "auto" }}
-        />
-      )}
+      <View style={{ marginLeft: "auto", flexDirection: "row", alignItems: "center" }}>
+        {right}
+        {!disabled && (
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={destructive ? colors.danger : colors.textDim}
+            style={{ marginLeft: spacing.sm }}
+          />
+        )}
+      </View>
     </Pressable>
   );
 }
@@ -256,4 +335,38 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   rowLabel: { fontSize: fontSize.md, fontWeight: "500" },
+  rowValue: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "500" },
+  flag: { fontSize: 20 },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.sm,
+  },
+  modalTitle: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: "700",
+    paddingBottom: spacing.sm,
+  },
+  langRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.bg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  langRowActive: { borderColor: colors.primary },
+  langName: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
 });

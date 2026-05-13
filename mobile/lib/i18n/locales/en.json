@@ -1,0 +1,176 @@
+{
+  "language": {
+    "title": "Choose your language",
+    "subtitle": "You can change this later from your profile.",
+    "continue": "Continue",
+    "names": {
+      "ka": "Georgian",
+      "en": "English",
+      "de": "German"
+    }
+  },
+  "splash": {
+    "tagline": "Your medication assistant"
+  },
+  "register": {
+    "eyebrow": "MEDHELP",
+    "title": "Welcome\nto MedHelp",
+    "subtitle": "Enter your phone number — we'll text you a one-time code.",
+    "phoneLabel": "Mobile number",
+    "phonePlaceholder": "555 12 34 56",
+    "continue": "Continue",
+    "haveAccount": "Already have an account?",
+    "login": "Sign in",
+    "phoneTooShort": "Enter the full number",
+    "otp": {
+      "eyebrow": "VERIFICATION",
+      "title": "Enter the code",
+      "subtitle": "We sent a one-time 4-digit code to +995 {{phone}}.",
+      "verifying": "Verifying...",
+      "resend": "Resend code",
+      "changeNumber": "Change number"
+    },
+    "pin": {
+      "eyebrow": "SECURITY",
+      "setupTitle": "Create a PIN",
+      "setupSubtitle": "Use this PIN for quick sign-in",
+      "confirmTitle": "Confirm your PIN",
+      "confirmSubtitle": "One more time — to confirm",
+      "mismatch": "PIN codes don't match",
+      "saving": "Saving PIN..."
+    },
+    "errors": {
+      "otpInvalid": "The code is incorrect",
+      "otpExpired": "The code expired — we'll send a new one",
+      "otpNotFound": "Request a new code",
+      "network": "Network error — please try again"
+    }
+  },
+  "login": {
+    "greeting": "Welcome back",
+    "enterPin": "Enter your PIN",
+    "pinInvalid": "PIN is incorrect",
+    "failed": "Couldn't sign you in — try again",
+    "switchNumber": "Use a different number",
+    "biometric": "Sign in to MedHelp",
+    "cancel": "Cancel"
+  },
+  "tabs": {
+    "today": "Today",
+    "medications": "Medications",
+    "profile": "Profile"
+  },
+  "today": {
+    "greeting": "Hello",
+    "greetingNamed": "Hello, {{name}}",
+    "remaining": "Left today",
+    "taken": "Taken",
+    "emptyTitle": "Nothing scheduled today",
+    "emptySubtitle": "Add a medication — we'll plan its dose times.",
+    "period": {
+      "morning": "Morning",
+      "afternoon": "Afternoon",
+      "evening": "Evening"
+    }
+  },
+  "medications": {
+    "title": "Medications",
+    "filter": {
+      "all": "All",
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed"
+    },
+    "frequencyShort": "{{count}}x/day",
+    "doseCount_one": "{{count}} dose",
+    "doseCount_other": "{{count}} doses",
+    "emptyTitleAll": "No medications yet",
+    "emptyTitleFiltered": "Nothing in this category",
+    "emptySubtitle": "Add a new medication — we'll plan its dose times and remind you.",
+    "addButton": "Add medication",
+    "newMedication": "New medication",
+    "field": {
+      "name": "Name",
+      "namePlaceholder": "e.g. Amoxicillin",
+      "dosage": "Dosage",
+      "dosagePlaceholder": "e.g. 500 mg",
+      "instructions": "Instructions",
+      "instructionsPlaceholder": "e.g. After meals",
+      "optional": "Optional",
+      "frequency": "How many times a day?",
+      "times": "Times",
+      "duration": "Duration",
+      "days": "{{count}} days"
+    },
+    "totalIntakes": "{{start}} – {{end}} ({{total}} total)",
+    "save": "Add",
+    "saveFailed": "Error",
+    "saveFailedBody": "Couldn't save",
+    "detail": {
+      "schedule": "Schedule",
+      "times": "Times",
+      "startDate": "Start",
+      "endDate": "End",
+      "taken": "Taken",
+      "remaining": "Remaining",
+      "history": "History",
+      "more": "... ({{count}} more)",
+      "notFound": "Medication not found"
+    },
+    "action": {
+      "pause": "Pause",
+      "activate": "Activate",
+      "complete": "Complete"
+    },
+    "delete": {
+      "title": "Delete",
+      "confirm": "Delete {{name}}?",
+      "cancel": "Cancel",
+      "ok": "Delete"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "PAUSED": "Paused"
+    }
+  },
+  "intake": {
+    "status": {
+      "PENDING": "Pending",
+      "TAKEN": "Taken",
+      "MISSED": "Missed",
+      "SKIPPED": "Skipped"
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "noName": "No name",
+    "editName": "Edit name",
+    "appSection": "App",
+    "notifications": "Notifications",
+    "changePin": "Change PIN",
+    "language": "Language",
+    "logout": "Sign out",
+    "logoutConfirmTitle": "Sign out",
+    "logoutConfirmBody": "Are you sure you want to sign out?",
+    "cancel": "Cancel",
+    "edit": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "firstNamePlaceholder": "First name",
+      "lastNamePlaceholder": "Last name",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saveFailed": "Error",
+      "saveFailedBody": "Couldn't save — please try again"
+    }
+  },
+  "notification": {
+    "title": "Time to take {{name}}",
+    "androidChannelName": "Medication reminders"
+  },
+  "common": {
+    "delete": "Delete"
+  }
+}

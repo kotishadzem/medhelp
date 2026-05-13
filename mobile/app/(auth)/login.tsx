@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { PinDots, PinPad } from "@/components/PinPad";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { ApiError } from "@/lib/api/client";
@@ -12,6 +13,7 @@ import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 export default function Login() {
   const router = useRouter();
+  const { t } = useTranslation();
   const { storedPhone, loginWithPin, forgetPhone } = useAuth();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -37,19 +39,18 @@ export default function Login() {
       setError(null);
       try {
         await loginWithPin(storedPhone, entered);
-        // root guard handles redirect.
       } catch (e) {
         setPin("");
         if (e instanceof ApiError && e.code === "INVALID_CREDENTIALS") {
-          setError("PIN კოდი არასწორია");
+          setError(t("login.pinInvalid"));
         } else {
-          setError("ვერ მოხერხდა შესვლა — სცადე თავიდან");
+          setError(t("login.failed"));
         }
       } finally {
         setLoading(false);
       }
     },
-    [storedPhone, loginWithPin]
+    [storedPhone, loginWithPin, t]
   );
 
   useEffect(() => {
@@ -58,23 +59,14 @@ export default function Login() {
 
   const tryBiometric = useCallback(async () => {
     if (!biometricAvailable) return;
-    const res = await LocalAuthentication.authenticateAsync({
-      promptMessage: "შესვლა MedHelp-ში",
-      cancelLabel: "გაუქმება",
+    await LocalAuthentication.authenticateAsync({
+      promptMessage: t("login.biometric"),
+      cancelLabel: t("login.cancel"),
       disableDeviceFallback: false,
     });
-    if (!res.success) return;
-    // Biometric just unlocks the stored refresh token. Auth bootstrap
-    // already loaded it, but the user is on /login because the refresh
-    // either expired or failed. In that case, prompt for PIN anyway —
-    // here we just trigger refreshMe via authApi when possible.
-    // For a real "biometric login," the access token would be re-issued
-    // via the refresh token. We rely on AuthContext bootstrap for that.
-    // Edge case for future: re-issue tokens here if expired.
-  }, [biometricAvailable]);
+  }, [biometricAvailable, t]);
 
   if (!storedPhone) {
-    // Should not normally land here, but bounce to register.
     router.replace("/(auth)/register");
     return null;
   }
@@ -86,7 +78,7 @@ export default function Login() {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>+</Text>
           </View>
-          <Text style={styles.greeting}>კეთილი დაბრუნება</Text>
+          <Text style={styles.greeting}>{t("login.greeting")}</Text>
           <Text style={styles.phone}>{maskPhone(storedPhone)}</Text>
         </View>
 
@@ -95,7 +87,7 @@ export default function Login() {
           {error ? (
             <Text style={styles.errorText}>{error}</Text>
           ) : (
-            <Text style={styles.muted}>შეიყვანე PIN კოდი</Text>
+            <Text style={styles.muted}>{t("login.enterPin")}</Text>
           )}
         </View>
 
@@ -119,7 +111,7 @@ export default function Login() {
               }}
               hitSlop={10}
             >
-              <Text style={styles.linkAction}>სხვა ნომრით შესვლა</Text>
+              <Text style={styles.linkAction}>{t("login.switchNumber")}</Text>
             </Pressable>
           </View>
         </View>

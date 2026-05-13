@@ -1,0 +1,176 @@
+{
+  "language": {
+    "title": "აირჩიე ენა",
+    "subtitle": "შეგიძლია მოგვიანებითაც შეცვალო პროფილში.",
+    "continue": "გაგრძელება",
+    "names": {
+      "ka": "ქართული",
+      "en": "ინგლისური",
+      "de": "გერმანული"
+    }
+  },
+  "splash": {
+    "tagline": "თქვენი მედიკამენტების ასისტენტი"
+  },
+  "register": {
+    "eyebrow": "MEDHELP",
+    "title": "კეთილი იყოს\nშენი მობრძანება",
+    "subtitle": "შეიყვანე ტელეფონის ნომერი — გამოგიგზავნით ერთჯერად კოდს.",
+    "phoneLabel": "მობილური ნომერი",
+    "phonePlaceholder": "555 12 34 56",
+    "continue": "გაგრძელება",
+    "haveAccount": "უკვე გაქვს ანგარიში?",
+    "login": "შესვლა",
+    "phoneTooShort": "შეიყვანე სრული ნომერი",
+    "otp": {
+      "eyebrow": "VERIFICATION",
+      "title": "შეიყვანე კოდი",
+      "subtitle": "გავუგზავნეთ ერთჯერადი 4-ციფრიანი კოდი +995 {{phone}}-ზე.",
+      "verifying": "ვამოწმებთ...",
+      "resend": "კოდის თავიდან გამოგზავნა",
+      "changeNumber": "ნომრის შეცვლა"
+    },
+    "pin": {
+      "eyebrow": "უსაფრთხოება",
+      "setupTitle": "დააყენე PIN კოდი",
+      "setupSubtitle": "გამოიყენე ეს კოდი სწრაფი შესვლისთვის",
+      "confirmTitle": "გაიმეორე PIN კოდი",
+      "confirmSubtitle": "ერთხელ კიდევ — დასადასტურებლად",
+      "mismatch": "PIN კოდები არ ემთხვევა",
+      "saving": "ვაყენებთ PIN-ს..."
+    },
+    "errors": {
+      "otpInvalid": "კოდი არასწორია",
+      "otpExpired": "კოდს ვადა გაუვიდა — გამოიგზავნი თავიდან",
+      "otpNotFound": "მოითხოვე ახალი კოდი",
+      "network": "ქსელის შეცდომა — სცადე თავიდან"
+    }
+  },
+  "login": {
+    "greeting": "კეთილი დაბრუნება",
+    "enterPin": "შეიყვანე PIN კოდი",
+    "pinInvalid": "PIN კოდი არასწორია",
+    "failed": "ვერ მოხერხდა შესვლა — სცადე თავიდან",
+    "switchNumber": "სხვა ნომრით შესვლა",
+    "biometric": "შესვლა MedHelp-ში",
+    "cancel": "გაუქმება"
+  },
+  "tabs": {
+    "today": "დღეს",
+    "medications": "მედიკამენტები",
+    "profile": "პროფილი"
+  },
+  "today": {
+    "greeting": "გამარჯობა",
+    "greetingNamed": "გამარჯობა, {{name}}",
+    "remaining": "დარჩა დღეს",
+    "taken": "მიღებული",
+    "emptyTitle": "დღეს დოზა არ გაქვს",
+    "emptySubtitle": "დაამატე მედიკამენტი — დაგეგმავ მისი მიღების დროებს.",
+    "period": {
+      "morning": "დილა",
+      "afternoon": "შუადღე",
+      "evening": "საღამო"
+    }
+  },
+  "medications": {
+    "title": "მედიკამენტები",
+    "filter": {
+      "all": "ყველა",
+      "active": "მიმდინარე",
+      "paused": "შეჩერებული",
+      "completed": "დასრულებული"
+    },
+    "frequencyShort": "{{count}}x/დღე",
+    "doseCount_one": "{{count}} დოზა",
+    "doseCount_other": "{{count}} დოზა",
+    "emptyTitleAll": "მედიკამენტი ჯერ არ გაქვს",
+    "emptyTitleFiltered": "ამ კატეგორიაში ცარიელია",
+    "emptySubtitle": "დაამატე ახალი მედიკამენტი — დაგეგმავ მიღების დროებს და მიიღებ შეხსენებებს.",
+    "addButton": "დაამატე მედიკამენტი",
+    "newMedication": "ახალი მედიკამენტი",
+    "field": {
+      "name": "დასახელება",
+      "namePlaceholder": "მაგ. ამოქსიცილინი",
+      "dosage": "დოზა",
+      "dosagePlaceholder": "მაგ. 500 მგ",
+      "instructions": "ინსტრუქცია",
+      "instructionsPlaceholder": "მაგ. ჭამის შემდეგ",
+      "optional": "არასავალდებულო",
+      "frequency": "დღეში რამდენჯერ?",
+      "times": "დროები",
+      "duration": "ხანგრძლივობა",
+      "days": "{{count}} დღე"
+    },
+    "totalIntakes": "{{start}} – {{end}} ({{total}} ჯამში)",
+    "save": "დამატება",
+    "saveFailed": "შეცდომა",
+    "saveFailedBody": "ვერ მოხერხდა შენახვა",
+    "detail": {
+      "schedule": "გრაფიკი",
+      "times": "დროები",
+      "startDate": "დაწყება",
+      "endDate": "დასრულება",
+      "taken": "მიღებული",
+      "remaining": "დარჩა",
+      "history": "ისტორია",
+      "more": "... ({{count}} მეტი)",
+      "notFound": "მედიკამენტი ვერ მოიძებნა"
+    },
+    "action": {
+      "pause": "შეჩერება",
+      "activate": "გააქტიურება",
+      "complete": "დასრულება"
+    },
+    "delete": {
+      "title": "წაშლა",
+      "confirm": "წავშალო {{name}}?",
+      "cancel": "გაუქმება",
+      "ok": "წაშლა"
+    },
+    "status": {
+      "ACTIVE": "მიმდინარე",
+      "COMPLETED": "დასრულებული",
+      "CANCELLED": "გაუქმებული",
+      "PAUSED": "შეჩერებული"
+    }
+  },
+  "intake": {
+    "status": {
+      "PENDING": "მოლოდინში",
+      "TAKEN": "მიღებული",
+      "MISSED": "გამოტოვებული",
+      "SKIPPED": "გამოტოვილი"
+    }
+  },
+  "profile": {
+    "title": "პროფილი",
+    "noName": "უსახელო",
+    "editName": "სახელის შეცვლა",
+    "appSection": "აპლიკაცია",
+    "notifications": "შეტყობინებები",
+    "changePin": "PIN-ის შეცვლა",
+    "language": "ენა",
+    "logout": "გასვლა",
+    "logoutConfirmTitle": "გასვლა",
+    "logoutConfirmBody": "გნებავთ გასვლა?",
+    "cancel": "გაუქმება",
+    "edit": {
+      "firstName": "სახელი",
+      "lastName": "გვარი",
+      "firstNamePlaceholder": "სახელი",
+      "lastNamePlaceholder": "გვარი",
+      "cancel": "გაუქმება",
+      "save": "შენახვა",
+      "saveFailed": "შეცდომა",
+      "saveFailedBody": "ვერ შენახა — სცადე თავიდან"
+    }
+  },
+  "notification": {
+    "title": "დროა მიიღო {{name}}",
+    "androidChannelName": "მედიკამენტის შეხსენებები"
+  },
+  "common": {
+    "delete": "წაშლა"
+  }
+}

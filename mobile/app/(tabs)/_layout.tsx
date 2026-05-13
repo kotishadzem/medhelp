@@ -1,9 +1,11 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useTranslation } from "react-i18next";
 import { colors, spacing } from "@/lib/theme";
 import { Platform, View } from "react-native";
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   return (
     <Tabs
       screenOptions={{
@@ -28,7 +30,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "დღეს",
+          title: t("tabs.today"),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name={focused ? "today" : "today-outline"} color={color} />
           ),
@@ -37,7 +39,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="medications"
         options={{
-          title: "მედიკამენტები",
+          title: t("tabs.medications"),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name={focused ? "medkit" : "medkit-outline"} color={color} />
           ),
@@ -46,7 +48,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "პროფილი",
+          title: t("tabs.profile"),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name={focused ? "person" : "person-outline"} color={color} />
           ),

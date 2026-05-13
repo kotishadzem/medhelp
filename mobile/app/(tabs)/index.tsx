@@ -11,18 +11,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { medicationsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { cancelForIntakes } from "@/lib/notifications";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import { formatTimeHHMM, timePeriod } from "@/lib/format";
 import type { IntakeWithMedication } from "@/lib/types";
-
-const PERIOD_LABEL = {
-  morning: "დილა",
-  afternoon: "შუადღე",
-  evening: "საღამო",
-};
 
 const PERIOD_ICON = {
   morning: "sunny-outline",
@@ -31,6 +26,7 @@ const PERIOD_ICON = {
 } as const;
 
 export default function TodayScreen() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const qc = useQueryClient();
   const todayQuery = useQuery({
@@ -128,22 +124,18 @@ export default function TodayScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.greeting}>
-            გამარჯობა{user?.firstName ? `, ${user.firstName}` : ""}
+            {user?.firstName
+              ? t("today.greetingNamed", { name: user.firstName })
+              : t("today.greeting")}
           </Text>
-          <Text style={styles.dateLine}>{formatTodayLabel(todayQuery.data?.date)}</Text>
+          <Text style={styles.dateLine}>
+            {formatTodayLabel(todayQuery.data?.date, i18n.language)}
+          </Text>
         </View>
 
         <View style={styles.statRow}>
-          <StatCard
-            label="დარჩა დღეს"
-            value={counts.pending}
-            tint={colors.warning}
-          />
-          <StatCard
-            label="მიღებული"
-            value={counts.taken}
-            tint={colors.success}
-          />
+          <StatCard label={t("today.remaining")} value={counts.pending} tint={colors.warning} />
+          <StatCard label={t("today.taken")} value={counts.taken} tint={colors.success} />
         </View>
 
         {todayQuery.isLoading ? (
@@ -153,18 +145,14 @@ export default function TodayScreen() {
         ) : counts.total === 0 ? (
           <EmptyToday />
         ) : (
-          (Object.keys(PERIOD_LABEL) as (keyof typeof PERIOD_LABEL)[]).map((period) => {
+          (["morning", "afternoon", "evening"] as const).map((period) => {
             const items = groups[period];
             if (items.length === 0) return null;
             return (
               <View key={period} style={styles.section}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons
-                    name={PERIOD_ICON[period]}
-                    size={16}
-                    color={colors.textMuted}
-                  />
-                  <Text style={styles.sectionLabel}>{PERIOD_LABEL[period]}</Text>
+                  <Ionicons name={PERIOD_ICON[period]} size={16} color={colors.textMuted} />
+                  <Text style={styles.sectionLabel}>{t(`today.period.${period}`)}</Text>
                 </View>
                 {items.map((intake) => (
                   <IntakeRow key={intake.id} intake={intake} onMark={markTaken} onUndo={undo} />
@@ -237,19 +225,30 @@ function IntakeRow({
 }
 
 function EmptyToday() {
+  const { t } = useTranslation();
   return (
     <View style={styles.empty}>
       <Ionicons name="leaf-outline" size={48} color={colors.textDim} />
-      <Text style={styles.emptyTitle}>დღეს დოზა არ გაქვს</Text>
-      <Text style={styles.emptySubtitle}>დაამატე მედიკამენტი — დაგეგმავ მისი მიღების დროებს.</Text>
+      <Text style={styles.emptyTitle}>{t("today.emptyTitle")}</Text>
+      <Text style={styles.emptySubtitle}>{t("today.emptySubtitle")}</Text>
     </View>
   );
 }
 
-function formatTodayLabel(iso?: string): string {
+function formatTodayLabel(iso: string | undefined, lang: string): string {
   if (!iso) return "";
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("ka-GE", { weekday: "long", day: "numeric", month: "long" });
+  return d.toLocaleDateString(localeFor(lang), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
+function localeFor(lang: string): string {
+  if (lang === "ka") return "ka-GE";
+  if (lang === "de") return "de-DE";
+  return "en-GB";
 }
 
 const styles = StyleSheet.create({

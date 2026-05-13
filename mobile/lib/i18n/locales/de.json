@@ -1,0 +1,176 @@
+{
+  "language": {
+    "title": "Sprache auswählen",
+    "subtitle": "Du kannst sie später jederzeit im Profil ändern.",
+    "continue": "Weiter",
+    "names": {
+      "ka": "Georgisch",
+      "en": "Englisch",
+      "de": "Deutsch"
+    }
+  },
+  "splash": {
+    "tagline": "Dein Medikamenten-Assistent"
+  },
+  "register": {
+    "eyebrow": "MEDHELP",
+    "title": "Willkommen\nbei MedHelp",
+    "subtitle": "Gib deine Telefonnummer ein — wir senden dir einen Einmalcode.",
+    "phoneLabel": "Mobilnummer",
+    "phonePlaceholder": "555 12 34 56",
+    "continue": "Weiter",
+    "haveAccount": "Schon ein Konto?",
+    "login": "Anmelden",
+    "phoneTooShort": "Bitte vollständige Nummer eingeben",
+    "otp": {
+      "eyebrow": "BESTÄTIGUNG",
+      "title": "Code eingeben",
+      "subtitle": "Wir haben einen 4-stelligen Einmalcode an +995 {{phone}} gesendet.",
+      "verifying": "Wird überprüft...",
+      "resend": "Code erneut senden",
+      "changeNumber": "Nummer ändern"
+    },
+    "pin": {
+      "eyebrow": "SICHERHEIT",
+      "setupTitle": "PIN festlegen",
+      "setupSubtitle": "Diesen PIN nutzt du fürs schnelle Anmelden",
+      "confirmTitle": "PIN bestätigen",
+      "confirmSubtitle": "Bitte noch einmal — zur Bestätigung",
+      "mismatch": "Die PINs stimmen nicht überein",
+      "saving": "PIN wird gespeichert..."
+    },
+    "errors": {
+      "otpInvalid": "Code ist falsch",
+      "otpExpired": "Code abgelaufen — bitte neuen anfordern",
+      "otpNotFound": "Bitte neuen Code anfordern",
+      "network": "Netzwerkfehler — bitte erneut versuchen"
+    }
+  },
+  "login": {
+    "greeting": "Willkommen zurück",
+    "enterPin": "PIN eingeben",
+    "pinInvalid": "PIN ist falsch",
+    "failed": "Anmeldung fehlgeschlagen — erneut versuchen",
+    "switchNumber": "Mit anderer Nummer anmelden",
+    "biometric": "Anmelden bei MedHelp",
+    "cancel": "Abbrechen"
+  },
+  "tabs": {
+    "today": "Heute",
+    "medications": "Medikamente",
+    "profile": "Profil"
+  },
+  "today": {
+    "greeting": "Hallo",
+    "greetingNamed": "Hallo, {{name}}",
+    "remaining": "Heute offen",
+    "taken": "Eingenommen",
+    "emptyTitle": "Heute keine Dosen geplant",
+    "emptySubtitle": "Füge ein Medikament hinzu — wir planen die Einnahmezeiten.",
+    "period": {
+      "morning": "Morgen",
+      "afternoon": "Mittag",
+      "evening": "Abend"
+    }
+  },
+  "medications": {
+    "title": "Medikamente",
+    "filter": {
+      "all": "Alle",
+      "active": "Aktiv",
+      "paused": "Pausiert",
+      "completed": "Abgeschlossen"
+    },
+    "frequencyShort": "{{count}}x/Tag",
+    "doseCount_one": "{{count}} Dosis",
+    "doseCount_other": "{{count}} Dosen",
+    "emptyTitleAll": "Noch keine Medikamente",
+    "emptyTitleFiltered": "In dieser Kategorie nichts",
+    "emptySubtitle": "Füge ein Medikament hinzu — wir planen Einnahmen und erinnern dich.",
+    "addButton": "Medikament hinzufügen",
+    "newMedication": "Neues Medikament",
+    "field": {
+      "name": "Name",
+      "namePlaceholder": "z. B. Amoxicillin",
+      "dosage": "Dosis",
+      "dosagePlaceholder": "z. B. 500 mg",
+      "instructions": "Hinweise",
+      "instructionsPlaceholder": "z. B. Nach dem Essen",
+      "optional": "Optional",
+      "frequency": "Wie oft am Tag?",
+      "times": "Zeiten",
+      "duration": "Dauer",
+      "days": "{{count}} Tage"
+    },
+    "totalIntakes": "{{start}} – {{end}} ({{total}} gesamt)",
+    "save": "Hinzufügen",
+    "saveFailed": "Fehler",
+    "saveFailedBody": "Speichern fehlgeschlagen",
+    "detail": {
+      "schedule": "Plan",
+      "times": "Zeiten",
+      "startDate": "Beginn",
+      "endDate": "Ende",
+      "taken": "Eingenommen",
+      "remaining": "Verbleibend",
+      "history": "Verlauf",
+      "more": "... ({{count}} weitere)",
+      "notFound": "Medikament nicht gefunden"
+    },
+    "action": {
+      "pause": "Pausieren",
+      "activate": "Aktivieren",
+      "complete": "Abschließen"
+    },
+    "delete": {
+      "title": "Löschen",
+      "confirm": "{{name}} löschen?",
+      "cancel": "Abbrechen",
+      "ok": "Löschen"
+    },
+    "status": {
+      "ACTIVE": "Aktiv",
+      "COMPLETED": "Abgeschlossen",
+      "CANCELLED": "Storniert",
+      "PAUSED": "Pausiert"
+    }
+  },
+  "intake": {
+    "status": {
+      "PENDING": "Offen",
+      "TAKEN": "Eingenommen",
+      "MISSED": "Verpasst",
+      "SKIPPED": "Übersprungen"
+    }
+  },
+  "profile": {
+    "title": "Profil",
+    "noName": "Kein Name",
+    "editName": "Name bearbeiten",
+    "appSection": "App",
+    "notifications": "Benachrichtigungen",
+    "changePin": "PIN ändern",
+    "language": "Sprache",
+    "logout": "Abmelden",
+    "logoutConfirmTitle": "Abmelden",
+    "logoutConfirmBody": "Möchtest du dich wirklich abmelden?",
+    "cancel": "Abbrechen",
+    "edit": {
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "firstNamePlaceholder": "Vorname",
+      "lastNamePlaceholder": "Nachname",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "saveFailed": "Fehler",
+      "saveFailedBody": "Speichern fehlgeschlagen — bitte erneut versuchen"
+    }
+  },
+  "notification": {
+    "title": "Zeit für {{name}}",
+    "androidChannelName": "Medikamenten-Erinnerungen"
+  },
+  "common": {
+    "delete": "Löschen"
+  }
+}

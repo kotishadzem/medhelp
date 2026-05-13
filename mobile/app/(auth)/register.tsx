@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,20 +10,27 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/Button";
 import { CodeCells, PinDots, PinPad } from "@/components/PinPad";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { authApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { formatPhoneForDisplay, normalizePhone } from "@/lib/phone";
+import {
+  changeLanguage,
+  SUPPORTED_LANGUAGES,
+  type Language,
+} from "@/lib/i18n";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
-type Step = "phone" | "otp" | "pin" | "pin-confirm";
+type Step = "language" | "phone" | "otp" | "pin" | "pin-confirm";
 
 export default function Register() {
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const { loginWithOtp, setupPin, refreshMe, pendingPinSetup, user } = useAuth();
-  const [step, setStep] = useState<Step>(pendingPinSetup ? "pin" : "phone");
+  const [step, setStep] = useState<Step>(pendingPinSetup ? "pin" : "language");
   const [phone, setPhone] = useState(pendingPinSetup ? user?.phone ?? "" : "");
   const [code, setCode] = useState("");
   const [pin, setPin] = useState("");
@@ -35,7 +41,7 @@ export default function Register() {
   const handleSendOtp = async () => {
     const normalized = normalizePhone(phone);
     if (normalized.length < 9) {
-      setError("შეიყვანე სრული ნომერი");
+      setError(t("register.phoneTooShort"));
       return;
     }
     setError(null);
@@ -44,7 +50,7 @@ export default function Register() {
       await authApi.sendOtp(normalized);
       setStep("otp");
     } catch (e) {
-      setError(messageFor(e));
+      setError(messageFor(e, t));
     } finally {
       setLoading(false);
     }
@@ -55,29 +61,25 @@ export default function Register() {
     setLoading(true);
     try {
       const res = await loginWithOtp(normalizePhone(phone), entered);
-      if (res.hasPinSet) {
-        // Existing user logging in via OTP — straight to app.
-        return; // Auth state flips to authenticated, root guard redirects.
-      }
+      if (res.hasPinSet) return;
       setStep("pin");
     } catch (e) {
       setCode("");
-      setError(messageFor(e));
+      setError(messageFor(e, t));
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePinComplete = (entered: string) => {
+  const handlePinComplete = () => {
     setError(null);
     setStep("pin-confirm");
   };
 
   const handlePinConfirmComplete = async (entered: string) => {
     if (entered !== pin) {
-      setError("PIN კოდები არ ემთხვევა");
+      setError(t("register.pin.mismatch"));
       setPinConfirm("");
-      // shake feedback would be nice — minimal for now.
       setTimeout(() => {
         setStep("pin");
         setPin("");
@@ -90,24 +92,21 @@ export default function Register() {
     try {
       await setupPin(pin);
       await refreshMe();
-      // Auth state already authenticated — guard will redirect.
     } catch (e) {
-      setError(messageFor(e));
+      setError(messageFor(e, t));
     } finally {
       setLoading(false);
     }
   };
 
-  // Auto-submit OTP when 4 digits entered
   useEffect(() => {
     if (step === "otp" && code.length === 4 && !loading) {
       handleVerifyOtp(code);
     }
   }, [step, code, loading]);
 
-  // Auto-advance PIN when 4 digits entered
   useEffect(() => {
-    if (step === "pin" && pin.length === 4) handlePinComplete(pin);
+    if (step === "pin" && pin.length === 4) handlePinComplete();
   }, [step, pin]);
 
   useEffect(() => {
@@ -121,6 +120,16 @@ export default function Register() {
         style={styles.flex}
       >
         <View style={styles.body}>
+          {step === "language" && (
+            <LanguageStep
+              selected={i18n.language as Language}
+              onSelect={async (lang) => {
+                await changeLanguage(lang);
+              }}
+              onContinue={() => setStep("phone")}
+            />
+          )}
+
           {step === "phone" && (
             <PhoneStep
               phone={phone}
@@ -129,6 +138,7 @@ export default function Register() {
               loading={loading}
               onSubmit={handleSendOtp}
               onSwitchLogin={() => router.replace("/(auth)/login")}
+              onBack={() => setStep("language")}
             />
           )}
 
@@ -145,7 +155,7 @@ export default function Register() {
                 try {
                   await authApi.sendOtp(normalizePhone(phone));
                 } catch (e) {
-                  setError(messageFor(e));
+                  setError(messageFor(e, t));
                 }
               }}
               onBack={() => {
@@ -158,8 +168,8 @@ export default function Register() {
 
           {step === "pin" && (
             <PinStep
-              title="დააყენე PIN კოდი"
-              subtitle="გამოიყენე ეს კოდი სწრაფი შესვლისთვის"
+              title={t("register.pin.setupTitle")}
+              subtitle={t("register.pin.setupSubtitle")}
               value={pin}
               onChange={(v) => {
                 setError(null);
@@ -171,8 +181,8 @@ export default function Register() {
 
           {step === "pin-confirm" && (
             <PinStep
-              title="გაიმეორე PIN კოდი"
-              subtitle="ერთხელ კიდევ — დასადასტურებლად"
+              title={t("register.pin.confirmTitle")}
+              subtitle={t("register.pin.confirmSubtitle")}
               value={pinConfirm}
               onChange={(v) => {
                 setError(null);
@@ -188,6 +198,57 @@ export default function Register() {
   );
 }
 
+function LanguageStep({
+  selected,
+  onSelect,
+  onContinue,
+}: {
+  selected: Language;
+  onSelect: (l: Language) => void;
+  onContinue: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.stepContainer}>
+      <View style={styles.header}>
+        <Text style={styles.eyebrow}>MEDHELP</Text>
+        <Text style={styles.title}>{t("language.title")}</Text>
+        <Text style={styles.subtitle}>{t("language.subtitle")}</Text>
+      </View>
+
+      <View style={{ gap: spacing.sm }}>
+        {SUPPORTED_LANGUAGES.map((lang) => {
+          const active = selected === lang;
+          return (
+            <Pressable
+              key={lang}
+              onPress={() => onSelect(lang)}
+              style={({ pressed }) => [
+                styles.langCard,
+                active && styles.langCardActive,
+                pressed && { opacity: 0.85 },
+              ]}
+            >
+              <Text style={styles.flag}>{FLAG[lang]}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.langName, active && styles.langNameActive]}>
+                  {NATIVE_NAMES[lang]}
+                </Text>
+                <Text style={styles.langTranslated}>{t(`language.names.${lang}`)}</Text>
+              </View>
+              {active && <View style={styles.langDot} />}
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.footer}>
+        <Button label={t("language.continue")} onPress={onContinue} />
+      </View>
+    </View>
+  );
+}
+
 function PhoneStep({
   phone,
   onChangePhone,
@@ -195,6 +256,7 @@ function PhoneStep({
   loading,
   onSubmit,
   onSwitchLogin,
+  onBack,
 }: {
   phone: string;
   onChangePhone: (v: string) => void;
@@ -202,34 +264,37 @@ function PhoneStep({
   loading: boolean;
   onSubmit: () => void;
   onSwitchLogin: () => void;
+  onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const inputRef = useRef<TextInput>(null);
   useEffect(() => {
-    const t = setTimeout(() => inputRef.current?.focus(), 250);
-    return () => clearTimeout(t);
+    const tt = setTimeout(() => inputRef.current?.focus(), 250);
+    return () => clearTimeout(tt);
   }, []);
 
   return (
     <View style={styles.stepContainer}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>MEDHELP</Text>
-        <Text style={styles.title}>კეთილი იყოს{"\n"}შენი მობრძანება</Text>
-        <Text style={styles.subtitle}>
-          შეიყვანე ტელეფონის ნომერი — გამოგიგზავნით ერთჯერად კოდს.
-        </Text>
+        <Pressable onPress={onBack} hitSlop={10} style={styles.backLink}>
+          <Text style={styles.backLinkText}>‹ {t("language.title")}</Text>
+        </Pressable>
+        <Text style={styles.eyebrow}>{t("register.eyebrow")}</Text>
+        <Text style={styles.title}>{t("register.title")}</Text>
+        <Text style={styles.subtitle}>{t("register.subtitle")}</Text>
       </View>
 
       <View style={styles.fieldGroup}>
-        <Text style={styles.label}>მობილური ნომერი</Text>
+        <Text style={styles.label}>{t("register.phoneLabel")}</Text>
         <View style={styles.phoneField}>
           <Text style={styles.dialCode}>+995</Text>
           <View style={styles.divider} />
           <TextInput
             ref={inputRef}
             value={formatPhoneForDisplay(phone)}
-            onChangeText={(t) => onChangePhone(normalizePhone(t))}
+            onChangeText={(text) => onChangePhone(normalizePhone(text))}
             keyboardType="phone-pad"
-            placeholder="555 12 34 56"
+            placeholder={t("register.phonePlaceholder")}
             placeholderTextColor={colors.textDim}
             style={styles.phoneInput}
             maxLength={13}
@@ -241,10 +306,10 @@ function PhoneStep({
       </View>
 
       <View style={styles.footer}>
-        <Button label="გაგრძელება" onPress={onSubmit} loading={loading} />
+        <Button label={t("register.continue")} onPress={onSubmit} loading={loading} />
         <Pressable onPress={onSwitchLogin} style={styles.linkRow}>
-          <Text style={styles.linkText}>უკვე გაქვს ანგარიში?</Text>
-          <Text style={styles.linkAction}>შესვლა</Text>
+          <Text style={styles.linkText}>{t("register.haveAccount")}</Text>
+          <Text style={styles.linkAction}>{t("register.login")}</Text>
         </Pressable>
       </View>
     </View>
@@ -268,31 +333,29 @@ function OtpStep({
   onResend: () => void;
   onBack: () => void;
 }) {
+  const { t } = useTranslation();
   const hiddenRef = useRef<TextInput>(null);
   useEffect(() => {
-    const t = setTimeout(() => hiddenRef.current?.focus(), 200);
-    return () => clearTimeout(t);
+    const tt = setTimeout(() => hiddenRef.current?.focus(), 200);
+    return () => clearTimeout(tt);
   }, []);
 
   return (
     <View style={styles.stepContainer}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>VERIFICATION</Text>
-        <Text style={styles.title}>შეიყვანე კოდი</Text>
+        <Text style={styles.eyebrow}>{t("register.otp.eyebrow")}</Text>
+        <Text style={styles.title}>{t("register.otp.title")}</Text>
         <Text style={styles.subtitle}>
-          გავუგზავნეთ ერთჯერადი 4-ციფრიანი კოდი +995 {formatPhoneForDisplay(phone)}-ზე.
+          {t("register.otp.subtitle", { phone: formatPhoneForDisplay(phone) })}
         </Text>
       </View>
 
-      <Pressable
-        style={styles.codeArea}
-        onPress={() => hiddenRef.current?.focus()}
-      >
+      <Pressable style={styles.codeArea} onPress={() => hiddenRef.current?.focus()}>
         <CodeCells length={4} value={code} error={!!error} />
         <TextInput
           ref={hiddenRef}
           value={code}
-          onChangeText={(t) => onChange(t.replace(/\D/g, "").slice(0, 4))}
+          onChangeText={(text) => onChange(text.replace(/\D/g, "").slice(0, 4))}
           keyboardType="number-pad"
           maxLength={4}
           style={styles.hiddenInput}
@@ -302,12 +365,12 @@ function OtpStep({
 
       <View style={{ alignItems: "center", gap: spacing.sm }}>
         {error && <Text style={styles.errorText}>{error}</Text>}
-        {loading && <Text style={styles.muted}>ვამოწმებთ...</Text>}
+        {loading && <Text style={styles.muted}>{t("register.otp.verifying")}</Text>}
         <Pressable onPress={onResend} hitSlop={8}>
-          <Text style={styles.linkAction}>კოდის თავიდან გამოგზავნა</Text>
+          <Text style={styles.linkAction}>{t("register.otp.resend")}</Text>
         </Pressable>
         <Pressable onPress={onBack} hitSlop={8}>
-          <Text style={styles.linkText}>ნომრის შეცვლა</Text>
+          <Text style={styles.linkText}>{t("register.otp.changeNumber")}</Text>
         </Pressable>
       </View>
     </View>
@@ -329,10 +392,11 @@ function PinStep({
   error?: string | null;
   loading?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.stepContainer}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>უსაფრთხოება</Text>
+        <Text style={styles.eyebrow}>{t("register.pin.eyebrow")}</Text>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
@@ -340,7 +404,7 @@ function PinStep({
       <View style={{ alignItems: "center", gap: spacing.lg }}>
         <PinDots length={4} filled={value.length} error={!!error} />
         {error && <Text style={styles.errorText}>{error}</Text>}
-        {loading && <Text style={styles.muted}>ვაყენებთ PIN-ს...</Text>}
+        {loading && <Text style={styles.muted}>{t("register.pin.saving")}</Text>}
       </View>
 
       <PinPad value={value} onChange={onChange} />
@@ -348,15 +412,27 @@ function PinStep({
   );
 }
 
-function messageFor(e: unknown): string {
+const FLAG: Record<Language, string> = {
+  ka: "🇬🇪",
+  en: "🇬🇧",
+  de: "🇩🇪",
+};
+
+const NATIVE_NAMES: Record<Language, string> = {
+  ka: "ქართული",
+  en: "English",
+  de: "Deutsch",
+};
+
+function messageFor(e: unknown, t: (k: string) => string): string {
   if (e instanceof ApiError) {
-    if (e.code === "OTP_INVALID") return "კოდი არასწორია";
-    if (e.code === "OTP_EXPIRED") return "კოდს ვადა გაუვიდა — გამოიგზავნი თავიდან";
-    if (e.code === "OTP_NOT_FOUND") return "მოითხოვე ახალი კოდი";
+    if (e.code === "OTP_INVALID") return t("register.errors.otpInvalid");
+    if (e.code === "OTP_EXPIRED") return t("register.errors.otpExpired");
+    if (e.code === "OTP_NOT_FOUND") return t("register.errors.otpNotFound");
     if (e.code === "VALIDATION_ERROR") return e.message;
     return e.message;
   }
-  return "ქსელის შეცდომა — სცადე თავიდან";
+  return t("register.errors.network");
 }
 
 const styles = StyleSheet.create({
@@ -365,6 +441,8 @@ const styles = StyleSheet.create({
   body: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.lg },
   stepContainer: { flex: 1, justifyContent: "space-between", paddingVertical: spacing.lg },
   header: { gap: spacing.sm },
+  backLink: { marginBottom: spacing.sm, alignSelf: "flex-start" },
+  backLinkText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },
   eyebrow: {
     color: colors.primary,
     fontSize: fontSize.xs,
@@ -414,4 +492,21 @@ const styles = StyleSheet.create({
   linkAction: { color: colors.primary, fontSize: fontSize.sm, fontWeight: "600" },
   codeArea: { alignItems: "center", gap: spacing.lg, paddingVertical: spacing.xl },
   hiddenInput: { position: "absolute", opacity: 0, height: 1, width: 1 },
+
+  langCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  langCardActive: { borderColor: colors.primary, backgroundColor: colors.surfaceElevated },
+  flag: { fontSize: 32 },
+  langName: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
+  langNameActive: { color: colors.text },
+  langTranslated: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
+  langDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary },
 });

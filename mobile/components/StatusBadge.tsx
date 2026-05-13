@@ -1,26 +1,13 @@
 import { StyleSheet, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { IntakeStatus, MedicationStatus } from "@/lib/types";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
-
-const INTAKE_LABEL: Record<IntakeStatus, string> = {
-  PENDING: "მოლოდინში",
-  TAKEN: "მიღებული",
-  MISSED: "გამოტოვებული",
-  SKIPPED: "გამოტოვილი",
-};
 
 const INTAKE_COLOR: Record<IntakeStatus, string> = {
   PENDING: colors.pending,
   TAKEN: colors.taken,
   MISSED: colors.missed,
   SKIPPED: colors.skipped,
-};
-
-const MED_LABEL: Record<MedicationStatus, string> = {
-  ACTIVE: "მიმდინარე",
-  COMPLETED: "დასრულებული",
-  CANCELLED: "გაუქმებული",
-  PAUSED: "შეჩერებული",
 };
 
 const MED_COLOR: Record<MedicationStatus, string> = {
@@ -31,11 +18,13 @@ const MED_COLOR: Record<MedicationStatus, string> = {
 };
 
 export function IntakeBadge({ status }: { status: IntakeStatus }) {
-  return <Badge label={INTAKE_LABEL[status]} color={INTAKE_COLOR[status]} />;
+  const { t } = useTranslation();
+  return <Badge label={t(`intake.status.${status}`)} color={INTAKE_COLOR[status]} />;
 }
 
 export function MedicationBadge({ status }: { status: MedicationStatus }) {
-  return <Badge label={MED_LABEL[status]} color={MED_COLOR[status]} />;
+  const { t } = useTranslation();
+  return <Badge label={t(`medications.status.${status}`)} color={MED_COLOR[status]} />;
 }
 
 export function Badge({ label, color }: { label: string; color: string }) {

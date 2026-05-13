@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { medicationsApi } from "@/lib/api/endpoints";
 import { Button } from "@/components/Button";
 import { addDaysYMD, dateInputToISO, todayYMD } from "@/lib/format";
@@ -25,6 +26,7 @@ const DEFAULT_TIMES = ["08:00", "14:00", "20:00", "22:00"];
 export default function CreateMedication() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { t } = useTranslation();
 
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
@@ -59,7 +61,10 @@ export default function CreateMedication() {
       router.back();
     },
     onError: (e) => {
-      Alert.alert("შეცდომა", e instanceof Error ? e.message : "ვერ მოხერხდა შენახვა");
+      Alert.alert(
+        t("medications.saveFailed"),
+        e instanceof Error ? e.message : t("medications.saveFailedBody")
+      );
     },
   });
 
@@ -93,39 +98,39 @@ export default function CreateMedication() {
           <Pressable onPress={() => router.back()} hitSlop={10}>
             <Ionicons name="close" size={26} color={colors.text} />
           </Pressable>
-          <Text style={styles.title}>ახალი მედიკამენტი</Text>
+          <Text style={styles.title}>{t("medications.newMedication")}</Text>
           <View style={{ width: 26 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.body}>
-          <Section title="დასახელება">
+          <Section title={t("medications.field.name")}>
             <Input
               value={name}
               onChangeText={setName}
-              placeholder="მაგ. ამოქსიცილინი"
+              placeholder={t("medications.field.namePlaceholder")}
               autoCapitalize="words"
             />
           </Section>
 
-          <Section title="დოზა">
+          <Section title={t("medications.field.dosage")}>
             <Input
               value={dosage}
               onChangeText={setDosage}
-              placeholder="მაგ. 500 მგ"
+              placeholder={t("medications.field.dosagePlaceholder")}
               autoCapitalize="none"
             />
           </Section>
 
-          <Section title="ინსტრუქცია" optional>
+          <Section title={t("medications.field.instructions")} optional>
             <Input
               value={instructions}
               onChangeText={setInstructions}
-              placeholder="მაგ. ჭამის შემდეგ"
+              placeholder={t("medications.field.instructionsPlaceholder")}
               multiline
             />
           </Section>
 
-          <Section title="დღეში რამდენჯერ?">
+          <Section title={t("medications.field.frequency")}>
             <View style={styles.segment}>
               {[1, 2, 3, 4].map((n) => (
                 <Pressable
@@ -143,12 +148,12 @@ export default function CreateMedication() {
             </View>
           </Section>
 
-          <Section title="დროები">
+          <Section title={t("medications.field.times")}>
             <View style={styles.timesGrid}>
-              {times.map((t, i) => (
+              {times.map((tm, i) => (
                 <TimePicker
                   key={i}
-                  value={t}
+                  value={tm}
                   onChange={(v) => {
                     const next = [...times];
                     next[i] = v;
@@ -159,7 +164,7 @@ export default function CreateMedication() {
             </View>
           </Section>
 
-          <Section title="ხანგრძლივობა">
+          <Section title={t("medications.field.duration")}>
             <View style={styles.segment}>
               {[3, 7, 14, 30].map((d) => (
                 <Pressable
@@ -170,20 +175,24 @@ export default function CreateMedication() {
                   <Text
                     style={[styles.segmentText, durationDays === d && styles.segmentTextActive]}
                   >
-                    {d} დღე
+                    {t("medications.field.days", { count: d })}
                   </Text>
                 </Pressable>
               ))}
             </View>
             <Text style={styles.helper}>
-              {startYMD} – {endYMD} ({durationDays * frequency} ჯამში)
+              {t("medications.totalIntakes", {
+                start: startYMD,
+                end: endYMD,
+                total: durationDays * frequency,
+              })}
             </Text>
           </Section>
         </ScrollView>
 
         <View style={styles.footer}>
           <Button
-            label="დამატება"
+            label={t("medications.save")}
             onPress={submit}
             disabled={!canSubmit}
             loading={mutation.isPending}
@@ -203,11 +212,12 @@ function Section({
   optional?: boolean;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
       <View style={styles.labelRow}>
         <Text style={styles.label}>{title}</Text>
-        {optional && <Text style={styles.optional}>არასავალდებულო</Text>}
+        {optional && <Text style={styles.optional}>{t("medications.field.optional")}</Text>}
       </View>
       {children}
     </View>

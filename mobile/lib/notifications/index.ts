@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import i18n from "@/lib/i18n";
 import type { Medication, MedicationIntake } from "@/lib/types";
 
 const STORAGE_KEY = "medhelp.notificationMap";
@@ -55,7 +56,7 @@ export async function ensurePermission(): Promise<boolean> {
 async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android") return;
   await Notifications.setNotificationChannelAsync("medication-reminders", {
-    name: "მედიკამენტის შეხსენებები",
+    name: i18n.t("notification.androidChannelName"),
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: [0, 250, 250, 250],
     lightColor: "#0ea5e9",
@@ -82,7 +83,7 @@ export async function scheduleForMedication(
     try {
       const identifier = await Notifications.scheduleNotificationAsync({
         content: {
-          title: `დროა მიიღო ${medication.name}`,
+          title: i18n.t("notification.title", { name: medication.name }),
           body: `${medication.dosage}${
             medication.instructions ? ` · ${medication.instructions}` : ""
           }`,

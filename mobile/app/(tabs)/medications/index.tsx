@@ -12,21 +12,23 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useRouter, type Href } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { medicationsApi } from "@/lib/api/endpoints";
 import type { Medication, MedicationStatus } from "@/lib/types";
 import { MedicationBadge } from "@/components/StatusBadge";
 import { formatDateShort } from "@/lib/format";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
-const FILTERS: { key: "ALL" | MedicationStatus; label: string }[] = [
-  { key: "ALL", label: "ყველა" },
-  { key: "ACTIVE", label: "მიმდინარე" },
-  { key: "PAUSED", label: "შეჩერებული" },
-  { key: "COMPLETED", label: "დასრულებული" },
+const FILTERS: { key: "ALL" | MedicationStatus; tKey: string }[] = [
+  { key: "ALL", tKey: "medications.filter.all" },
+  { key: "ACTIVE", tKey: "medications.filter.active" },
+  { key: "PAUSED", tKey: "medications.filter.paused" },
+  { key: "COMPLETED", tKey: "medications.filter.completed" },
 ];
 
 export default function MedicationsList() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<"ALL" | MedicationStatus>("ALL");
   const query = useQuery({
     queryKey: ["medications", filter],
@@ -38,7 +40,7 @@ export default function MedicationsList() {
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>მედიკამენტები</Text>
+        <Text style={styles.title}>{t("medications.title")}</Text>
         <Pressable
           onPress={() => router.push("/(tabs)/medications/create")}
           style={({ pressed }) => [styles.addBtn, pressed && { opacity: 0.8 }]}
@@ -65,7 +67,7 @@ export default function MedicationsList() {
                 filter === f.key && styles.filterLabelActive,
               ]}
             >
-              {f.label}
+              {t(f.tKey)}
             </Text>
           </Pressable>
         ))}
@@ -97,6 +99,7 @@ export default function MedicationsList() {
 }
 
 function MedRow({ medication }: { medication: Medication }) {
+  const { t } = useTranslation();
   return (
     <Link href={`/(tabs)/medications/${medication.id}` as Href} asChild>
       <Pressable
@@ -109,7 +112,8 @@ function MedRow({ medication }: { medication: Medication }) {
           <MedicationBadge status={medication.status} />
         </View>
         <Text style={styles.medMeta}>
-          {medication.dosage} · {medication.frequencyPerDay}x/დღე ·{" "}
+          {medication.dosage} ·{" "}
+          {t("medications.frequencyShort", { count: medication.frequencyPerDay })} ·{" "}
           {medication.timesOfDay.join(", ")}
         </Text>
         <View style={styles.cardFooter}>
@@ -123,7 +127,9 @@ function MedRow({ medication }: { medication: Medication }) {
           {medication._count && (
             <View style={styles.metaItem}>
               <Ionicons name="time-outline" size={14} color={colors.textDim} />
-              <Text style={styles.metaText}>{medication._count.intakes} დოზა</Text>
+              <Text style={styles.metaText}>
+                {t("medications.doseCount", { count: medication._count.intakes })}
+              </Text>
             </View>
           )}
         </View>
@@ -133,22 +139,21 @@ function MedRow({ medication }: { medication: Medication }) {
 }
 
 function Empty({ onAdd, isFiltered }: { onAdd: () => void; isFiltered: boolean }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.empty}>
       <Ionicons name="medkit-outline" size={48} color={colors.textDim} />
       <Text style={styles.emptyTitle}>
-        {isFiltered ? "ამ კატეგორიაში ცარიელია" : "მედიკამენტი ჯერ არ გაქვს"}
+        {isFiltered ? t("medications.emptyTitleFiltered") : t("medications.emptyTitleAll")}
       </Text>
-      <Text style={styles.emptySubtitle}>
-        დაამატე ახალი მედიკამენტი — დაგეგმავ მიღების დროებს და მიიღებ შეხსენებებს.
-      </Text>
+      <Text style={styles.emptySubtitle}>{t("medications.emptySubtitle")}</Text>
       {!isFiltered && (
         <Pressable
           onPress={onAdd}
           style={({ pressed }) => [styles.emptyBtn, pressed && { opacity: 0.85 }]}
         >
           <Ionicons name="add" size={18} color={colors.bg} />
-          <Text style={styles.emptyBtnText}>დაამატე მედიკამენტი</Text>
+          <Text style={styles.emptyBtnText}>{t("medications.addButton")}</Text>
         </Pressable>
       )}
     </View>
