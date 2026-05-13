@@ -13,9 +13,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { authApi } from "@/lib/api/endpoints";
+import { useRouter } from "expo-router";
+import { authApi, familyApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/Button";
 import { formatPhoneForDisplay } from "@/lib/phone";
@@ -31,12 +32,21 @@ const NATIVE_NAMES: Record<Language, string> = {
 
 export default function Profile() {
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const { user, logout, setUser } = useAuth();
   const [editing, setEditing] = useState(false);
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [showLangPicker, setShowLangPicker] = useState(false);
   const qc = useQueryClient();
+
+  const familyQuery = useQuery({
+    queryKey: ["family"],
+    queryFn: familyApi.list,
+    staleTime: 30_000,
+  });
+  const pendingForMe =
+    familyQuery.data?.incoming.filter((l) => l.status === "PENDING").length ?? 0;
 
   const save = useMutation({
     mutationFn: () =>
@@ -129,6 +139,14 @@ export default function Profile() {
               onPress={() => setEditing(true)}
             />
           )}
+
+          <Row
+            icon="people-outline"
+            label={t("profile.family")}
+            sublabel={t("profile.familySubtitle")}
+            badge={pendingForMe > 0 ? pendingForMe : undefined}
+            onPress={() => router.push("/(tabs)/family/index")}
+          />
 
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>{t("profile.appSection")}</Text>
@@ -223,17 +241,21 @@ function Input(props: React.ComponentProps<typeof TextInput>) {
 function Row({
   icon,
   label,
+  sublabel,
   onPress,
   destructive,
   disabled,
   right,
+  badge,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  sublabel?: string;
   onPress?: () => void;
   destructive?: boolean;
   disabled?: boolean;
   right?: React.ReactNode;
+  badge?: number;
 }) {
   const color = destructive ? colors.danger : disabled ? colors.textDim : colors.text;
   return (
@@ -242,9 +264,17 @@ function Row({
       style={({ pressed }) => [styles.row, pressed && !disabled && { opacity: 0.7 }]}
     >
       <Ionicons name={icon} size={20} color={color} />
-      <Text style={[styles.rowLabel, { color }]}>{label}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.rowLabel, { color }]}>{label}</Text>
+        {sublabel && <Text style={styles.rowSublabel}>{sublabel}</Text>}
+      </View>
       <View style={{ marginLeft: "auto", flexDirection: "row", alignItems: "center" }}>
         {right}
+        {badge !== undefined && (
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{badge}</Text>
+          </View>
+        )}
         {!disabled && (
           <Ionicons
             name="chevron-forward"
@@ -339,7 +369,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   rowLabel: { fontSize: fontSize.md, fontWeight: "500" },
+  rowSublabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
   rowValue: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "500" },
+  badge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    backgroundColor: colors.warning,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeText: { color: colors.bg, fontWeight: "800", fontSize: fontSize.xs },
   flag: { fontSize: 20 },
 
   modalBackdrop: {

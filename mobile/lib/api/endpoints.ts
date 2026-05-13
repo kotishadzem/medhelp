@@ -1,5 +1,7 @@
 import { apiRequest } from "./client";
 import type {
+  FamilyLink,
+  FamilyOverview,
   IntakeStatus,
   IntakeWithMedication,
   LoginResponse,
@@ -109,4 +111,26 @@ export const medicationsApi = {
       `/medications/${medicationId}/intakes/${intakeId}`,
       { method: "PATCH", body: { status } }
     ),
+};
+
+export type CreateFamilyInput = { customName: string } & Identifier;
+
+export const familyApi = {
+  list: () =>
+    apiRequest<{ outgoing: FamilyLink[]; incoming: FamilyLink[] }>("/family"),
+
+  add: (input: CreateFamilyInput) =>
+    apiRequest<{ link: FamilyLink }>("/family", { method: "POST", body: input }),
+
+  respond: (id: string, status: "ACCEPTED" | "REJECTED") =>
+    apiRequest<{ link: FamilyLink }>(`/family/${id}`, {
+      method: "PATCH",
+      body: { status },
+    }),
+
+  remove: (id: string) =>
+    apiRequest<{ message: string }>(`/family/${id}`, { method: "DELETE" }),
+
+  overview: (id: string) =>
+    apiRequest<FamilyOverview>(`/family/${id}/overview`),
 };

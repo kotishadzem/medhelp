@@ -54,6 +54,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="family" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -63,3 +63,40 @@ export type VerifyOtpResponse = AuthTokens & {
 export type LoginResponse = AuthTokens & {
   user: User;
 };
+
+export type FamilyLinkStatus = "PENDING" | "ACCEPTED" | "REJECTED";
+
+export type FamilyParty = {
+  id: string;
+  phone: string | null;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+};
+
+export type FamilyLink = {
+  id: string;
+  requesterId: string;
+  targetId: string;
+  customName: string;
+  status: FamilyLinkStatus;
+  createdAt: string;
+  respondedAt: string | null;
+  // populated on the listing endpoint depending on direction
+  target?: FamilyParty;
+  requester?: FamilyParty;
+};
+
+export type FamilyOverview = {
+  target: FamilyParty;
+  medications: Medication[];
+  stats: {
+    total: number;
+    taken: number;
+    missed: number;
+    skipped: number;
+    pending: number;
+    completionPct: number;
+  };
+  today: IntakeWithMedication[];
+};

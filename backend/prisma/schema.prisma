@@ -26,6 +26,12 @@ enum IntakeStatus {
   SKIPPED
 }
 
+enum FamilyLinkStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 model User {
   id            String         @id @default(cuid())
   phone         String?        @unique
@@ -39,7 +45,27 @@ model User {
   medications   Medication[]
   refreshTokens RefreshToken[]
 
+  familyRequests FamilyLink[] @relation("FamilyRequester")
+  familyTargets  FamilyLink[] @relation("FamilyTarget")
+
   @@map("users")
+}
+
+model FamilyLink {
+  id          String           @id @default(cuid())
+  requesterId String
+  requester   User             @relation("FamilyRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetId    String
+  target      User             @relation("FamilyTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  customName  String
+  status      FamilyLinkStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  @@unique([requesterId, targetId])
+  @@index([targetId, status])
+  @@index([requesterId, status])
+  @@map("family_links")
 }
 
 model RefreshToken {
