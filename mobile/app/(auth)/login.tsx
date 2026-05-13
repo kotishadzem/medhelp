@@ -1,171 +1,222 @@
-import { useCallback, useEffect, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as LocalAuthentication from "expo-local-authentication";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { PinDots, PinPad } from "@/components/PinPad";
+import { Button } from "@/components/Button";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { ApiError } from "@/lib/api/client";
-import { getBiometricEnabled } from "@/lib/auth/storage";
-import { maskPhone } from "@/lib/phone";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 export default function Login() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { storedIdentifier, loginWithPin, forgetIdentifier } = useAuth();
-  const [pin, setPin] = useState("");
+  const { loginWithPassword, storedIdentifier } = useAuth();
+
+  const initialIdentifier = storedIdentifier?.value ?? "";
+  const [identifier, setIdentifier] = useState(initialIdentifier);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
+
+  const inputRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    (async () => {
-      if (Platform.OS === "web") return;
-      const [enabled, hasHardware, isEnrolled] = await Promise.all([
-        getBiometricEnabled(),
-        LocalAuthentication.hasHardwareAsync(),
-        LocalAuthentication.isEnrolledAsync(),
-      ]);
-      setBiometricAvailable(enabled && hasHardware && isEnrolled);
-    })();
-  }, []);
-
-  const submit = useCallback(
-    async (entered: string) => {
-      if (!storedIdentifier) return;
-      setLoading(true);
-      setError(null);
-      try {
-        const id =
-          storedIdentifier.method === "phone"
-            ? { phone: storedIdentifier.value }
-            : { email: storedIdentifier.value };
-        await loginWithPin(id, entered);
-      } catch (e) {
-        setPin("");
-        if (e instanceof ApiError && e.code === "INVALID_CREDENTIALS") {
-          setError(t("login.pinInvalid"));
-        } else {
-          setError(t("login.failed"));
-        }
-      } finally {
-        setLoading(false);
+    const tt = setTimeout(() => {
+      if (initialIdentifier) {
+        passwordRef.current?.focus();
+      } else {
+        inputRef.current?.focus();
       }
-    },
-    [storedIdentifier, loginWithPin, t]
-  );
+    }, 250);
+    return () => clearTimeout(tt);
+  }, [initialIdentifier]);
 
-  useEffect(() => {
-    if (pin.length === 4 && !loading) submit(pin);
-  }, [pin, loading, submit]);
-
-  const tryBiometric = useCallback(async () => {
-    if (!biometricAvailable) return;
-    await LocalAuthentication.authenticateAsync({
-      promptMessage: t("login.biometric"),
-      cancelLabel: t("login.cancel"),
-      disableDeviceFallback: false,
-    });
-  }, [biometricAvailable, t]);
-
-  if (!storedIdentifier) {
-    router.replace("/(auth)/register");
-    return null;
-  }
-
-  const display =
-    storedIdentifier.method === "phone"
-      ? maskPhone(storedIdentifier.value)
-      : maskEmail(storedIdentifier.value);
+  const submit = async () => {
+    setError(null);
+    const id = identifier.trim();
+    if (!id || password.length < 6) {
+      setError(t("login.invalidCredentials"));
+      return;
+    }
+    const looksLikeEmail = id.includes("@");
+    setLoading(true);
+    try {
+      await loginWithPassword(
+        looksLikeEmail ? { email: id } : { phone: normalizePhone(id) },
+        password
+      );
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "INVALID_CREDENTIALS") {
+        setError(t("login.invalidCredentials"));
+      } else {
+        setError(t("login.failed"));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
-      <View style={styles.body}>
-        <View style={styles.header}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>+</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={styles.flex}
+      >
+        <View style={styles.body}>
+          <View style={styles.header}>
+            <View style={styles.logo}>
+              <Text style={styles.logoMark}>+</Text>
+            </View>
+            <Text style={styles.title}>{t("login.title")}</Text>
+            <Text style={styles.subtitle}>{t("login.subtitle")}</Text>
           </View>
-          <Text style={styles.greeting}>{t("login.greeting")}</Text>
-          <Text style={styles.phone}>{display}</Text>
-        </View>
 
-        <View style={styles.center}>
-          <PinDots length={4} filled={pin.length} error={!!error} />
-          {error ? (
-            <Text style={styles.errorText}>{error}</Text>
-          ) : (
-            <Text style={styles.muted}>{t("login.enterPin")}</Text>
-          )}
-        </View>
+          <View style={styles.fields}>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>{t("login.identifierLabel")}</Text>
+              <View style={styles.field}>
+                <Ionicons name="person-outline" size={18} color={colors.textMuted} />
+                <TextInput
+                  ref={inputRef}
+                  value={identifier}
+                  onChangeText={setIdentifier}
+                  placeholder={t("login.identifierPlaceholder")}
+                  placeholderTextColor={colors.textDim}
+                  style={styles.input}
+                  autoCapitalize="none"
+                  autoComplete="username"
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                />
+              </View>
+            </View>
 
-        <View style={styles.padArea}>
-          <PinPad value={pin} onChange={setPin} />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>{t("login.passwordLabel")}</Text>
+              <View style={styles.field}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
+                <TextInput
+                  ref={passwordRef}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder={t("login.passwordPlaceholder")}
+                  placeholderTextColor={colors.textDim}
+                  style={styles.input}
+                  autoCapitalize="none"
+                  autoComplete="current-password"
+                  secureTextEntry={!showPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={submit}
+                />
+                <Pressable
+                  onPress={() => setShowPassword((s) => !s)}
+                  hitSlop={8}
+                  accessibilityLabel={
+                    showPassword ? t("login.hidePassword") : t("login.showPassword")
+                  }
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={18}
+                    color={colors.textMuted}
+                  />
+                </Pressable>
+              </View>
+            </View>
 
-          <View style={styles.actions}>
-            {biometricAvailable && (
-              <Pressable
-                onPress={tryBiometric}
-                hitSlop={10}
-                style={({ pressed }) => [styles.bioBtn, pressed && { opacity: 0.7 }]}
-              >
-                <Text style={styles.bioIcon}>👆</Text>
-              </Pressable>
-            )}
+            {error && <Text style={styles.errorText}>{error}</Text>}
+          </View>
+
+          <View style={styles.footer}>
+            <Button label={t("login.submit")} onPress={submit} loading={loading} />
             <Pressable
-              onPress={async () => {
-                await forgetIdentifier();
-                router.replace("/(auth)/register");
-              }}
-              hitSlop={10}
+              onPress={() => router.replace("/(auth)/register")}
+              style={styles.linkRow}
             >
-              <Text style={styles.linkAction}>{t("login.switchNumber")}</Text>
+              <Text style={styles.linkText}>{t("login.noAccount")}</Text>
+              <Text style={styles.linkAction}>{t("login.register")}</Text>
             </Pressable>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function maskEmail(email: string): string {
-  const [name, domain] = email.split("@");
-  if (!domain) return email;
-  if (name.length <= 2) return `${name}@${domain}`;
-  return `${name[0]}${"⋯"}${name.slice(-1)}@${domain}`;
+function normalizePhone(raw: string): string {
+  // Allow user to type with spaces or + — keep digits and leading +.
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("+")) return "+" + trimmed.slice(1).replace(/[^\d]/g, "");
+  return trimmed.replace(/[^\d]/g, "");
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  body: { flex: 1, paddingHorizontal: spacing.xl, justifyContent: "space-between", paddingVertical: spacing.lg },
-  header: { alignItems: "center", gap: spacing.md, paddingTop: spacing.xl },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
+  flex: { flex: 1 },
+  body: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+    justifyContent: "space-between",
+    gap: spacing.lg,
+  },
+  header: { alignItems: "flex-start", gap: spacing.md, paddingTop: spacing.xxl },
+  logo: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing.sm,
   },
-  avatarText: { color: colors.bg, fontSize: 36, fontWeight: "800", marginTop: -4 },
-  greeting: { color: colors.text, fontSize: fontSize.xl, fontWeight: "700" },
-  phone: { color: colors.textMuted, fontSize: fontSize.md, letterSpacing: 1 },
-  center: { alignItems: "center", gap: spacing.md },
-  errorText: { color: colors.danger, fontSize: fontSize.sm },
-  muted: { color: colors.textMuted, fontSize: fontSize.sm },
-  padArea: { gap: spacing.lg, alignItems: "center" },
-  actions: { flexDirection: "row", alignItems: "center", gap: spacing.lg, paddingTop: spacing.sm },
-  bioBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.pill,
+  logoMark: { color: colors.bg, fontSize: 36, fontWeight: "800", marginTop: -4 },
+  title: {
+    color: colors.text,
+    fontSize: fontSize.display,
+    fontWeight: "800",
+    letterSpacing: -1,
+  },
+  subtitle: { color: colors.textMuted, fontSize: fontSize.md },
+
+  fields: { gap: spacing.lg },
+  fieldGroup: { gap: spacing.sm },
+  label: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  field: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    height: 56,
   },
-  bioIcon: { fontSize: 22 },
+  input: { flex: 1, color: colors.text, fontSize: fontSize.md },
+  errorText: { color: colors.danger, fontSize: fontSize.sm, textAlign: "center" },
+
+  footer: { gap: spacing.md, paddingBottom: spacing.md },
+  linkRow: { flexDirection: "row", justifyContent: "center", gap: spacing.xs, padding: spacing.sm },
+  linkText: { color: colors.textMuted, fontSize: fontSize.sm },
   linkAction: { color: colors.primary, fontSize: fontSize.sm, fontWeight: "600" },
 });

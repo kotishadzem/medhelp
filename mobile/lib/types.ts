@@ -54,12 +54,6 @@ export type AuthTokens = {
   refreshToken: string;
 };
 
-export type VerifyOtpResponse = AuthTokens & {
-  isNewUser: boolean;
-  hasPinSet: boolean;
-  user: User;
-};
-
 export type LoginResponse = AuthTokens & {
   user: User;
 };

@@ -9,30 +9,22 @@ import type {
   MedicationIntake,
   MedicationStatus,
   User,
-  VerifyOtpResponse,
 } from "@/lib/types";
 
 export type Identifier = { phone: string } | { email: string };
 
 export const authApi = {
-  // OTP-less: create-or-login by phone/email, returns tokens directly.
-  identify: (id: Identifier) =>
-    apiRequest<VerifyOtpResponse>("/auth/identify", {
+  register: (id: Identifier, password: string) =>
+    apiRequest<LoginResponse>("/auth/register", {
       method: "POST",
-      body: id,
+      body: { ...id, password },
       auth: false,
     }),
 
-  setupPin: (pin: string) =>
-    apiRequest<{ message: string }>("/auth/setup-pin", {
+  login: (id: Identifier, password: string) =>
+    apiRequest<LoginResponse>("/auth/login", {
       method: "POST",
-      body: { pin },
-    }),
-
-  loginPin: (id: Identifier, pin: string) =>
-    apiRequest<LoginResponse>("/auth/login-pin", {
-      method: "POST",
-      body: { ...id, pin },
+      body: { ...id, password },
       auth: false,
     }),
 

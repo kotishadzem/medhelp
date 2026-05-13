@@ -1,29 +1,30 @@
 import { NextRequest } from "next/server";
-import { loginPinSchema } from "@/lib/validators/auth";
+import { loginSchema } from "@/lib/validators/auth";
 import { success, validationError, error } from "@/lib/responses";
 import { prisma } from "@/lib/prisma";
-import { verifyPin, generateTokenPair, saveRefreshToken } from "@/lib/auth";
+import { generateTokenPair, saveRefreshToken, verifyPin as verifyPassword } from "@/lib/auth";
 
+// POST /api/auth/login — phone OR email + password.
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const parsed = loginPinSchema.safeParse(body);
+    const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
       return validationError(parsed.error.issues[0].message);
     }
 
-    const { phone, email, pin } = parsed.data;
-    const normalizedEmail = email?.toLowerCase();
+    const { phone, password } = parsed.data;
+    const email = parsed.data.email?.toLowerCase();
 
     const user = phone
       ? await prisma.user.findUnique({ where: { phone } })
-      : await prisma.user.findUnique({ where: { email: normalizedEmail! } });
+      : await prisma.user.findUnique({ where: { email: email! } });
     if (!user || !user.pinHash) {
       return error("Invalid credentials", 401, "INVALID_CREDENTIALS");
     }
 
-    const isPinValid = await verifyPin(pin, user.pinHash);
-    if (!isPinValid) {
+    const ok = await verifyPassword(password, user.pinHash);
+    if (!ok) {
       return error("Invalid credentials", 401, "INVALID_CREDENTIALS");
     }
 

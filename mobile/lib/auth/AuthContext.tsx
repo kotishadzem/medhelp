@@ -26,15 +26,11 @@ type AuthState = {
   status: "loading" | "unauthenticated" | "authenticated";
   user: User | null;
   storedIdentifier: StoredIdentifier | null;
-  pendingPinSetup: boolean;
 };
 
 type AuthContextValue = AuthState & {
-  identify: (
-    id: Identifier
-  ) => Promise<{ isNewUser: boolean; hasPinSet: boolean }>;
-  loginWithPin: (id: Identifier, pin: string) => Promise<void>;
-  setupPin: (pin: string) => Promise<void>;
+  loginWithPassword: (id: Identifier, password: string) => Promise<void>;
+  register: (id: Identifier, password: string) => Promise<void>;
   logout: () => Promise<void>;
   forgetIdentifier: () => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -56,7 +52,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     status: "loading",
     user: null,
     storedIdentifier: null,
-    pendingPinSetup: false,
   });
 
   const logout = useCallback(async () => {
@@ -76,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status: "unauthenticated",
       user: null,
       storedIdentifier: s.storedIdentifier,
-      pendingPinSetup: false,
     }));
   }, []);
 
@@ -99,7 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           status: "unauthenticated",
           user: null,
           storedIdentifier: s.storedIdentifier,
-          pendingPinSetup: false,
         }));
       },
     });
@@ -115,12 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
 
       if (!storedToken) {
-        setState({
-          status: "unauthenticated",
-          user: null,
-          storedIdentifier,
-          pendingPinSetup: false,
-        });
+        setState({ status: "unauthenticated", user: null, storedIdentifier });
         return;
       }
 
@@ -132,18 +120,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           status: "authenticated",
           user,
           storedIdentifier: identifierFromUser(user) ?? storedIdentifier,
-          pendingPinSetup: !user.hasPin,
         });
       } catch {
         if (cancelled) return;
         refreshTokenRef.current = null;
         await clearStoredRefreshToken();
-        setState({
-          status: "unauthenticated",
-          user: null,
-          storedIdentifier,
-          pendingPinSetup: false,
-        });
+        setState({ status: "unauthenticated", user: null, storedIdentifier });
       }
     })();
     return () => {
@@ -152,43 +134,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSession = useCallback(
-    async (accessToken: string, refreshToken: string, user: User, needsPin: boolean) => {
+    async (accessToken: string, refreshToken: string, user: User) => {
       accessTokenRef.current = accessToken;
       refreshTokenRef.current = refreshToken;
       await setStoredRefreshToken(refreshToken);
       const id = identifierFromUser(user);
       if (id) await setStoredIdentifier(id);
-      setState({
-        status: "authenticated",
-        user,
-        storedIdentifier: id,
-        pendingPinSetup: needsPin,
-      });
+      setState({ status: "authenticated", user, storedIdentifier: id });
     },
     []
   );
 
-  const identify = useCallback(
-    async (id: Identifier) => {
-      const res = await authApi.identify(id);
-      await setSession(res.accessToken, res.refreshToken, res.user, !res.hasPinSet);
-      return { isNewUser: res.isNewUser, hasPinSet: res.hasPinSet };
+  const loginWithPassword = useCallback(
+    async (id: Identifier, password: string) => {
+      const res = await authApi.login(id, password);
+      await setSession(res.accessToken, res.refreshToken, res.user);
     },
     [setSession]
   );
 
-  const loginWithPin = useCallback(
-    async (id: Identifier, pin: string) => {
-      const res = await authApi.loginPin(id, pin);
-      await setSession(res.accessToken, res.refreshToken, res.user, false);
+  const register = useCallback(
+    async (id: Identifier, password: string) => {
+      const res = await authApi.register(id, password);
+      await setSession(res.accessToken, res.refreshToken, res.user);
     },
     [setSession]
   );
-
-  const setupPin = useCallback(async (pin: string) => {
-    await authApi.setupPin(pin);
-    setState((s) => ({ ...s, pendingPinSetup: false }));
-  }, []);
 
   const forgetIdentifier = useCallback(async () => {
     await clearStoredIdentifier();
@@ -197,12 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshMe = useCallback(async () => {
     const { user } = await authApi.me();
-    setState((s) => ({
-      ...s,
-      user,
-      status: "authenticated",
-      pendingPinSetup: !user.hasPin,
-    }));
+    setState((s) => ({ ...s, user, status: "authenticated" }));
   }, []);
 
   const setUser = useCallback((user: User) => {
@@ -212,15 +178,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
-      identify,
-      loginWithPin,
-      setupPin,
+      loginWithPassword,
+      register,
       logout,
       forgetIdentifier,
       refreshMe,
       setUser,
     }),
-    [state, identify, loginWithPin, setupPin, logout, forgetIdentifier, refreshMe, setUser]
+    [state, loginWithPassword, register, logout, forgetIdentifier, refreshMe, setUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

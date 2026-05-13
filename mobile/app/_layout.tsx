@@ -33,13 +33,11 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { status, storedIdentifier, pendingPinSetup } = useAuth();
+  const { status } = useAuth();
 
   if (status === "loading") return <SplashView />;
 
   const isAuthed = status === "authenticated";
-  const readyForApp = isAuthed && !pendingPinSetup;
-  const initialAuthRoute = pendingPinSetup ? "register" : storedIdentifier ? "login" : "register";
 
   return (
     <Stack
@@ -49,11 +47,11 @@ function RootNavigator() {
         animation: "fade",
       }}
     >
-      <Stack.Protected guard={readyForApp}>
+      <Stack.Protected guard={isAuthed}>
         <Stack.Screen name="(tabs)" />
       </Stack.Protected>
-      <Stack.Protected guard={!readyForApp}>
-        <Stack.Screen name="(auth)" initialParams={{ start: initialAuthRoute }} />
+      <Stack.Protected guard={!isAuthed}>
+        <Stack.Screen name="(auth)" />
       </Stack.Protected>
     </Stack>
   );

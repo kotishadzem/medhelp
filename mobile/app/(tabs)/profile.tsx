@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { useRouter } from "expo-router";
+import { useRouter, type Href } from "expo-router";
 import { authApi, familyApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Button } from "@/components/Button";
@@ -145,7 +145,7 @@ export default function Profile() {
             label={t("profile.family")}
             sublabel={t("profile.familySubtitle")}
             badge={pendingForMe > 0 ? pendingForMe : undefined}
-            onPress={() => router.push("/(tabs)/family/index")}
+            onPress={() => router.push("/(tabs)/family/" as Href)}
           />
 
           <View style={styles.section}>

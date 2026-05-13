@@ -13,35 +13,30 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/Button";
-import { PinDots, PinPad } from "@/components/PinPad";
 import { CountryPicker } from "@/components/CountryPicker";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { type Identifier } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { formatPhoneForDisplay, normalizePhone } from "@/lib/phone";
-import { COUNTRIES, DEFAULT_COUNTRY, type Country } from "@/lib/countries";
-import {
-  changeLanguage,
-  SUPPORTED_LANGUAGES,
-  type Language,
-} from "@/lib/i18n";
+import { DEFAULT_COUNTRY, type Country } from "@/lib/countries";
+import { changeLanguage, SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 type Method = "phone" | "email";
-type Step = "language" | "method" | "phone" | "email" | "pin" | "pin-confirm";
+type Step = "language" | "method" | "identifier" | "password";
 
 export default function Register() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
-  const { identify, setupPin, refreshMe, pendingPinSetup } = useAuth();
+  const { register } = useAuth();
 
-  const [step, setStep] = useState<Step>(pendingPinSetup ? "pin" : "language");
+  const [step, setStep] = useState<Step>("language");
   const [method, setMethod] = useState<Method>("phone");
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [pin, setPin] = useState("");
-  const [pinConfirm, setPinConfirm] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -50,70 +45,52 @@ export default function Register() {
       ? { phone: `${country.dial}${normalizePhone(phone)}` }
       : { email: email.trim() };
 
-  const handleSubmitPhone = async () => {
-    const normalized = normalizePhone(phone);
-    if (normalized.length < 6) {
-      setError(t("register.phoneTooShort"));
-      return;
+  const validateIdentifier = (): string | null => {
+    if (method === "phone") {
+      if (normalizePhone(phone).length < 6) return t("register.phoneTooShort");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return t("register.emailTooShort");
     }
-    await identifyAndAdvance();
+    return null;
   };
 
-  const handleSubmitEmail = async () => {
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError(t("register.emailTooShort"));
+  const advanceFromIdentifier = () => {
+    const v = validateIdentifier();
+    if (v) {
+      setError(v);
       return;
     }
-    await identifyAndAdvance();
+    setError(null);
+    setStep("password");
   };
 
-  const identifyAndAdvance = async () => {
+  const submitPassword = async () => {
+    if (password.length < 6) {
+      setError(t("register.passwordTooShort"));
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setError(t("register.passwordMismatch"));
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      const res = await identify(currentIdentifier());
-      if (res.hasPinSet) return; // auth guard sends to (tabs)
-      setStep("pin");
+      await register(currentIdentifier(), password);
     } catch (e) {
-      setError(messageFor(e, t));
+      if (e instanceof ApiError && e.code === "ALREADY_REGISTERED") {
+        setError(t("register.alreadyRegistered"));
+      } else if (e instanceof ApiError && e.code === "VALIDATION_ERROR") {
+        setError(e.message);
+      } else if (e instanceof ApiError) {
+        setError(e.message);
+      } else {
+        setError(t("register.errors.network"));
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  const handlePinConfirmComplete = async (entered: string) => {
-    if (entered !== pin) {
-      setError(t("register.pin.mismatch"));
-      setPinConfirm("");
-      setTimeout(() => {
-        setStep("pin");
-        setPin("");
-        setPinConfirm("");
-        setError(null);
-      }, 1500);
-      return;
-    }
-    setLoading(true);
-    try {
-      await setupPin(pin);
-      await refreshMe();
-    } catch (e) {
-      setError(messageFor(e, t));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (step === "pin" && pin.length === 4) {
-      setError(null);
-      setStep("pin-confirm");
-    }
-  }, [step, pin]);
-
-  useEffect(() => {
-    if (step === "pin-confirm" && pinConfirm.length === 4) handlePinConfirmComplete(pinConfirm);
-  }, [step, pinConfirm]);
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
@@ -129,6 +106,7 @@ export default function Register() {
                 await changeLanguage(lang);
               }}
               onContinue={() => setStep("method")}
+              onBackToLogin={() => router.replace("/(auth)/login")}
             />
           )}
 
@@ -136,63 +114,51 @@ export default function Register() {
             <MethodStep
               onPick={(m) => {
                 setMethod(m);
-                setStep(m);
+                setStep("identifier");
                 setError(null);
               }}
               onBack={() => setStep("language")}
             />
           )}
 
-          {step === "phone" && (
+          {step === "identifier" && method === "phone" && (
             <PhoneStep
               country={country}
               onPickCountry={setCountry}
               phone={phone}
               onChangePhone={setPhone}
               error={error}
-              loading={loading}
-              onSubmit={handleSubmitPhone}
-              onSwitchLogin={() => router.replace("/(auth)/login")}
+              onSubmit={advanceFromIdentifier}
               onBack={() => setStep("method")}
             />
           )}
 
-          {step === "email" && (
+          {step === "identifier" && method === "email" && (
             <EmailStep
               email={email}
               onChangeEmail={setEmail}
               error={error}
-              loading={loading}
-              onSubmit={handleSubmitEmail}
-              onSwitchLogin={() => router.replace("/(auth)/login")}
+              onSubmit={advanceFromIdentifier}
               onBack={() => setStep("method")}
             />
           )}
 
-          {step === "pin" && (
-            <PinStep
-              title={t("register.pin.setupTitle")}
-              subtitle={t("register.pin.setupSubtitle")}
-              value={pin}
-              onChange={(v) => {
+          {step === "password" && (
+            <PasswordStep
+              password={password}
+              passwordConfirm={passwordConfirm}
+              onChangePassword={(v) => {
                 setError(null);
-                setPin(v);
+                setPassword(v);
               }}
-              error={error}
-            />
-          )}
-
-          {step === "pin-confirm" && (
-            <PinStep
-              title={t("register.pin.confirmTitle")}
-              subtitle={t("register.pin.confirmSubtitle")}
-              value={pinConfirm}
-              onChange={(v) => {
+              onChangePasswordConfirm={(v) => {
                 setError(null);
-                setPinConfirm(v);
+                setPasswordConfirm(v);
               }}
               error={error}
               loading={loading}
+              onSubmit={submitPassword}
+              onBack={() => setStep("identifier")}
             />
           )}
         </View>
@@ -205,15 +171,20 @@ function LanguageStep({
   selected,
   onSelect,
   onContinue,
+  onBackToLogin,
 }: {
   selected: Language;
   onSelect: (l: Language) => void;
   onContinue: () => void;
+  onBackToLogin: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <View style={styles.stepContainer}>
       <View style={styles.header}>
+        <Pressable onPress={onBackToLogin} hitSlop={10} style={styles.backLink}>
+          <Text style={styles.backLinkText}>‹ {t("login.title")}</Text>
+        </Pressable>
         <Text style={styles.eyebrow}>MEDHELP</Text>
         <Text style={styles.title}>{t("language.title")}</Text>
         <Text style={styles.subtitle}>{t("language.subtitle")}</Text>
@@ -323,9 +294,7 @@ function PhoneStep({
   phone,
   onChangePhone,
   error,
-  loading,
   onSubmit,
-  onSwitchLogin,
   onBack,
 }: {
   country: Country;
@@ -333,9 +302,7 @@ function PhoneStep({
   phone: string;
   onChangePhone: (v: string) => void;
   error: string | null;
-  loading: boolean;
   onSubmit: () => void;
-  onSwitchLogin: () => void;
   onBack: () => void;
 }) {
   const { t } = useTranslation();
@@ -380,7 +347,7 @@ function PhoneStep({
             placeholderTextColor={colors.textDim}
             style={styles.phoneInput}
             maxLength={16}
-            returnKeyType="done"
+            returnKeyType="next"
             onSubmitEditing={onSubmit}
           />
         </View>
@@ -388,11 +355,7 @@ function PhoneStep({
       </View>
 
       <View style={styles.footer}>
-        <Button label={t("register.continue")} onPress={onSubmit} loading={loading} />
-        <Pressable onPress={onSwitchLogin} style={styles.linkRow}>
-          <Text style={styles.linkText}>{t("register.haveAccount")}</Text>
-          <Text style={styles.linkAction}>{t("register.login")}</Text>
-        </Pressable>
+        <Button label={t("register.continue")} onPress={onSubmit} />
       </View>
 
       <CountryPicker
@@ -409,17 +372,13 @@ function EmailStep({
   email,
   onChangeEmail,
   error,
-  loading,
   onSubmit,
-  onSwitchLogin,
   onBack,
 }: {
   email: string;
   onChangeEmail: (v: string) => void;
   error: string | null;
-  loading: boolean;
   onSubmit: () => void;
-  onSwitchLogin: () => void;
   onBack: () => void;
 }) {
   const { t } = useTranslation();
@@ -438,7 +397,7 @@ function EmailStep({
         </Pressable>
         <Text style={styles.eyebrow}>{t("register.eyebrow")}</Text>
         <Text style={styles.title}>{t("register.title")}</Text>
-        <Text style={styles.subtitle}>{t("register.subtitleEmail")}</Text>
+        <Text style={styles.subtitle}>{t("register.subtitle")}</Text>
       </View>
 
       <View style={styles.fieldGroup}>
@@ -455,7 +414,7 @@ function EmailStep({
             placeholder={t("register.emailPlaceholder")}
             placeholderTextColor={colors.textDim}
             style={styles.emailInput}
-            returnKeyType="done"
+            returnKeyType="next"
             onSubmitEditing={onSubmit}
           />
         </View>
@@ -463,47 +422,106 @@ function EmailStep({
       </View>
 
       <View style={styles.footer}>
-        <Button label={t("register.continue")} onPress={onSubmit} loading={loading} />
-        <Pressable onPress={onSwitchLogin} style={styles.linkRow}>
-          <Text style={styles.linkText}>{t("register.haveAccount")}</Text>
-          <Text style={styles.linkAction}>{t("register.login")}</Text>
-        </Pressable>
+        <Button label={t("register.continue")} onPress={onSubmit} />
       </View>
     </View>
   );
 }
 
-function PinStep({
-  title,
-  subtitle,
-  value,
-  onChange,
+function PasswordStep({
+  password,
+  passwordConfirm,
+  onChangePassword,
+  onChangePasswordConfirm,
   error,
   loading,
+  onSubmit,
+  onBack,
 }: {
-  title: string;
-  subtitle: string;
-  value: string;
-  onChange: (v: string) => void;
-  error?: string | null;
-  loading?: boolean;
+  password: string;
+  passwordConfirm: string;
+  onChangePassword: (v: string) => void;
+  onChangePasswordConfirm: (v: string) => void;
+  error: string | null;
+  loading: boolean;
+  onSubmit: () => void;
+  onBack: () => void;
 }) {
   const { t } = useTranslation();
+  const pwRef = useRef<TextInput>(null);
+  const confirmRef = useRef<TextInput>(null);
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    const tt = setTimeout(() => pwRef.current?.focus(), 250);
+    return () => clearTimeout(tt);
+  }, []);
+
   return (
     <View style={styles.stepContainer}>
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>{t("register.pin.eyebrow")}</Text>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <Pressable onPress={onBack} hitSlop={10} style={styles.backLink}>
+          <Text style={styles.backLinkText}>‹</Text>
+        </Pressable>
+        <Text style={styles.eyebrow}>{t("register.eyebrow")}</Text>
+        <Text style={styles.title}>{t("register.passwordLabel")}</Text>
+        <Text style={styles.subtitle}>{t("register.passwordHint")}</Text>
       </View>
 
-      <View style={{ alignItems: "center", gap: spacing.lg }}>
-        <PinDots length={4} filled={value.length} error={!!error} />
+      <View style={{ gap: spacing.lg }}>
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>{t("register.passwordLabel")}</Text>
+          <View style={styles.emailField}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
+            <TextInput
+              ref={pwRef}
+              value={password}
+              onChangeText={onChangePassword}
+              placeholder={t("register.passwordPlaceholder")}
+              placeholderTextColor={colors.textDim}
+              style={styles.emailInput}
+              secureTextEntry={!show}
+              autoCapitalize="none"
+              autoComplete="new-password"
+              returnKeyType="next"
+              onSubmitEditing={() => confirmRef.current?.focus()}
+            />
+            <Pressable onPress={() => setShow((s) => !s)} hitSlop={8}>
+              <Ionicons
+                name={show ? "eye-off-outline" : "eye-outline"}
+                size={18}
+                color={colors.textMuted}
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.fieldGroup}>
+          <Text style={styles.label}>{t("register.passwordConfirmLabel")}</Text>
+          <View style={styles.emailField}>
+            <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} />
+            <TextInput
+              ref={confirmRef}
+              value={passwordConfirm}
+              onChangeText={onChangePasswordConfirm}
+              placeholder={t("register.passwordConfirmLabel")}
+              placeholderTextColor={colors.textDim}
+              style={styles.emailInput}
+              secureTextEntry={!show}
+              autoCapitalize="none"
+              autoComplete="new-password"
+              returnKeyType="done"
+              onSubmitEditing={onSubmit}
+            />
+          </View>
+        </View>
+
         {error && <Text style={styles.errorText}>{error}</Text>}
-        {loading && <Text style={styles.muted}>{t("register.pin.saving")}</Text>}
       </View>
 
-      <PinPad value={value} onChange={onChange} />
+      <View style={styles.footer}>
+        <Button label={t("register.create")} onPress={onSubmit} loading={loading} />
+      </View>
     </View>
   );
 }
@@ -515,17 +533,6 @@ const NATIVE_NAMES: Record<Language, string> = {
   en: "English",
   de: "Deutsch",
 };
-
-function messageFor(e: unknown, t: (k: string) => string): string {
-  if (e instanceof ApiError) {
-    if (e.code === "OTP_INVALID") return t("register.errors.otpInvalid");
-    if (e.code === "OTP_EXPIRED") return t("register.errors.otpExpired");
-    if (e.code === "OTP_NOT_FOUND") return t("register.errors.otpNotFound");
-    if (e.code === "VALIDATION_ERROR") return e.message;
-    return e.message;
-  }
-  return t("register.errors.network");
-}
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
@@ -584,9 +591,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
-    height: 60,
+    height: 56,
   },
-  emailInput: { flex: 1, color: colors.text, fontSize: fontSize.lg },
+  emailInput: { flex: 1, color: colors.text, fontSize: fontSize.md },
   dialCode: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
   divider: { width: 1, height: 28, backgroundColor: colors.border, marginHorizontal: spacing.md },
   phoneInput: {
@@ -597,13 +604,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   errorText: { color: colors.danger, fontSize: fontSize.sm, textAlign: "center" },
-  muted: { color: colors.textMuted, fontSize: fontSize.sm },
   footer: { gap: spacing.md, paddingBottom: spacing.md },
-  linkRow: { flexDirection: "row", justifyContent: "center", gap: spacing.xs, padding: spacing.sm },
-  linkText: { color: colors.textMuted, fontSize: fontSize.sm },
-  linkAction: { color: colors.primary, fontSize: fontSize.sm, fontWeight: "600" },
-  codeArea: { alignItems: "center", gap: spacing.lg, paddingVertical: spacing.xl },
-  hiddenInput: { position: "absolute", opacity: 0, height: 1, width: 1 },
 
   langCard: {
     flexDirection: "row",
