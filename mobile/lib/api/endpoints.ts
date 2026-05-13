@@ -10,18 +10,20 @@ import type {
   VerifyOtpResponse,
 } from "@/lib/types";
 
+export type Identifier = { phone: string } | { email: string };
+
 export const authApi = {
-  sendOtp: (phone: string) =>
+  sendOtp: (id: Identifier) =>
     apiRequest<{ message: string }>("/auth/send-otp", {
       method: "POST",
-      body: { phone },
+      body: id,
       auth: false,
     }),
 
-  verifyOtp: (phone: string, code: string) =>
+  verifyOtp: (id: Identifier, code: string) =>
     apiRequest<VerifyOtpResponse>("/auth/verify-otp", {
       method: "POST",
-      body: { phone, code },
+      body: { ...id, code },
       auth: false,
     }),
 
@@ -31,10 +33,10 @@ export const authApi = {
       body: { pin },
     }),
 
-  loginPin: (phone: string, pin: string) =>
+  loginPin: (id: Identifier, pin: string) =>
     apiRequest<LoginResponse>("/auth/login-pin", {
       method: "POST",
-      body: { phone, pin },
+      body: { ...id, pin },
       auth: false,
     }),
 

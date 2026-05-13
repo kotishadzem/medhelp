@@ -28,7 +28,8 @@ enum IntakeStatus {
 
 model User {
   id            String         @id @default(cuid())
-  phone         String         @unique
+  phone         String?        @unique
+  email         String?        @unique
   pinHash       String?
   firstName     String?
   lastName      String?

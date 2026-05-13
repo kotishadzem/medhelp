@@ -12,9 +12,12 @@ export async function POST(request: NextRequest) {
       return validationError(parsed.error.issues[0].message);
     }
 
-    const { phone, pin } = parsed.data;
+    const { phone, email, pin } = parsed.data;
+    const normalizedEmail = email?.toLowerCase();
 
-    const user = await prisma.user.findUnique({ where: { phone } });
+    const user = phone
+      ? await prisma.user.findUnique({ where: { phone } })
+      : await prisma.user.findUnique({ where: { email: normalizedEmail! } });
     if (!user || !user.pinHash) {
       return error("Invalid credentials", 401, "INVALID_CREDENTIALS");
     }
@@ -33,6 +36,7 @@ export async function POST(request: NextRequest) {
       user: {
         id: user.id,
         phone: user.phone,
+        email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,

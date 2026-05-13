@@ -18,14 +18,26 @@
     "subtitle": "Enter your phone number — we'll text you a one-time code.",
     "phoneLabel": "Mobile number",
     "phonePlaceholder": "555 12 34 56",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "emailTooShort": "Enter a valid email address",
     "continue": "Continue",
     "haveAccount": "Already have an account?",
     "login": "Sign in",
     "phoneTooShort": "Enter the full number",
+    "method": {
+      "title": "How do you want to sign up?",
+      "subtitle": "Use your mobile number or your email address.",
+      "phone": "Mobile number",
+      "phoneSubtitle": "Receive a code via SMS, any country",
+      "email": "Email address",
+      "emailSubtitle": "Receive a code in your inbox"
+    },
+    "subtitleEmail": "Enter your email — we'll send you a one-time code.",
     "otp": {
       "eyebrow": "VERIFICATION",
       "title": "Enter the code",
-      "subtitle": "We sent a one-time 4-digit code to +995 {{phone}}.",
+      "subtitle": "We sent a one-time 4-digit code to {{target}}.",
       "verifying": "Verifying...",
       "resend": "Resend code",
       "changeNumber": "Change number"
@@ -51,9 +63,13 @@
     "enterPin": "Enter your PIN",
     "pinInvalid": "PIN is incorrect",
     "failed": "Couldn't sign you in — try again",
-    "switchNumber": "Use a different number",
+    "switchNumber": "Use a different account",
     "biometric": "Sign in to MedHelp",
     "cancel": "Cancel"
+  },
+  "country": {
+    "title": "Select your country",
+    "search": "Search..."
   },
   "tabs": {
     "today": "Today",

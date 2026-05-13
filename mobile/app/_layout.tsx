@@ -33,13 +33,13 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const { status, storedPhone, pendingPinSetup } = useAuth();
+  const { status, storedIdentifier, pendingPinSetup } = useAuth();
 
   if (status === "loading") return <SplashView />;
 
   const isAuthed = status === "authenticated";
   const readyForApp = isAuthed && !pendingPinSetup;
-  const initialAuthRoute = pendingPinSetup ? "register" : storedPhone ? "login" : "register";
+  const initialAuthRoute = pendingPinSetup ? "register" : storedIdentifier ? "login" : "register";
 
   return (
     <Stack

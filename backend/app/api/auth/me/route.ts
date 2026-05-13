@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
       select: {
         id: true,
         phone: true,
+        email: true,
         firstName: true,
         lastName: true,
         role: true,
@@ -48,6 +49,7 @@ export async function PATCH(request: NextRequest) {
       select: {
         id: true,
         phone: true,
+        email: true,
         firstName: true,
         lastName: true,
         role: true,

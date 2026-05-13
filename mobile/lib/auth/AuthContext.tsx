@@ -9,39 +9,46 @@ import {
   useState,
 } from "react";
 import { configureTokens } from "@/lib/api/client";
-import { authApi } from "@/lib/api/endpoints";
+import { authApi, type Identifier } from "@/lib/api/endpoints";
 import { cancelAll as cancelAllNotifications } from "@/lib/notifications";
 import {
-  clearStoredPhone,
+  clearStoredIdentifier,
   clearStoredRefreshToken,
-  getStoredPhone,
+  getStoredIdentifier,
   getStoredRefreshToken,
-  setStoredPhone,
+  setStoredIdentifier,
   setStoredRefreshToken,
+  type StoredIdentifier,
 } from "./storage";
 import type { User } from "@/lib/types";
 
 type AuthState = {
   status: "loading" | "unauthenticated" | "authenticated";
   user: User | null;
-  storedPhone: string | null;
+  storedIdentifier: StoredIdentifier | null;
   pendingPinSetup: boolean;
 };
 
 type AuthContextValue = AuthState & {
   loginWithOtp: (
-    phone: string,
+    id: Identifier,
     code: string
   ) => Promise<{ isNewUser: boolean; hasPinSet: boolean }>;
-  loginWithPin: (phone: string, pin: string) => Promise<void>;
+  loginWithPin: (id: Identifier, pin: string) => Promise<void>;
   setupPin: (pin: string) => Promise<void>;
   logout: () => Promise<void>;
-  forgetPhone: () => Promise<void>;
+  forgetIdentifier: () => Promise<void>;
   refreshMe: () => Promise<void>;
   setUser: (user: User) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function identifierFromUser(user: User): StoredIdentifier | null {
+  if (user.phone) return { method: "phone", value: user.phone };
+  if (user.email) return { method: "email", value: user.email };
+  return null;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const accessTokenRef = useRef<string | null>(null);
@@ -49,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     status: "loading",
     user: null,
-    storedPhone: null,
+    storedIdentifier: null,
     pendingPinSetup: false,
   });
 
@@ -69,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((s) => ({
       status: "unauthenticated",
       user: null,
-      storedPhone: s.storedPhone,
+      storedIdentifier: s.storedIdentifier,
       pendingPinSetup: false,
     }));
   }, []);
@@ -92,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState((s) => ({
           status: "unauthenticated",
           user: null,
-          storedPhone: s.storedPhone,
+          storedIdentifier: s.storedIdentifier,
           pendingPinSetup: false,
         }));
       },
@@ -102,9 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [storedToken, storedPhone] = await Promise.all([
+      const [storedToken, storedIdentifier] = await Promise.all([
         getStoredRefreshToken(),
-        getStoredPhone(),
+        getStoredIdentifier(),
       ]);
       if (cancelled) return;
 
@@ -112,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({
           status: "unauthenticated",
           user: null,
-          storedPhone,
+          storedIdentifier,
           pendingPinSetup: false,
         });
         return;
@@ -125,7 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({
           status: "authenticated",
           user,
-          storedPhone,
+          storedIdentifier: identifierFromUser(user) ?? storedIdentifier,
           pendingPinSetup: !user.hasPin,
         });
       } catch {
@@ -135,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({
           status: "unauthenticated",
           user: null,
-          storedPhone,
+          storedIdentifier,
           pendingPinSetup: false,
         });
       }
@@ -150,11 +157,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessTokenRef.current = accessToken;
       refreshTokenRef.current = refreshToken;
       await setStoredRefreshToken(refreshToken);
-      await setStoredPhone(user.phone);
+      const id = identifierFromUser(user);
+      if (id) await setStoredIdentifier(id);
       setState({
         status: "authenticated",
         user,
-        storedPhone: user.phone,
+        storedIdentifier: id,
         pendingPinSetup: needsPin,
       });
     },
@@ -162,8 +170,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const loginWithOtp = useCallback(
-    async (phone: string, code: string) => {
-      const res = await authApi.verifyOtp(phone, code);
+    async (id: Identifier, code: string) => {
+      const res = await authApi.verifyOtp(id, code);
       await setSession(res.accessToken, res.refreshToken, res.user, !res.hasPinSet);
       return { isNewUser: res.isNewUser, hasPinSet: res.hasPinSet };
     },
@@ -171,8 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const loginWithPin = useCallback(
-    async (phone: string, pin: string) => {
-      const res = await authApi.loginPin(phone, pin);
+    async (id: Identifier, pin: string) => {
+      const res = await authApi.loginPin(id, pin);
       await setSession(res.accessToken, res.refreshToken, res.user, false);
     },
     [setSession]
@@ -183,9 +191,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, pendingPinSetup: false }));
   }, []);
 
-  const forgetPhone = useCallback(async () => {
-    await clearStoredPhone();
-    setState((s) => ({ ...s, storedPhone: null }));
+  const forgetIdentifier = useCallback(async () => {
+    await clearStoredIdentifier();
+    setState((s) => ({ ...s, storedIdentifier: null }));
   }, []);
 
   const refreshMe = useCallback(async () => {
@@ -209,11 +217,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loginWithPin,
       setupPin,
       logout,
-      forgetPhone,
+      forgetIdentifier,
       refreshMe,
       setUser,
     }),
-    [state, loginWithOtp, loginWithPin, setupPin, logout, forgetPhone, refreshMe, setUser]
+    [state, loginWithOtp, loginWithPin, setupPin, logout, forgetIdentifier, refreshMe, setUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

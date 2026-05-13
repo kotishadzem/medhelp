@@ -42,21 +42,24 @@ export async function setStoredLanguage(lang: Language): Promise<void> {
   }
 }
 
-let initialized = false;
+let initPromise: Promise<void> | null = null;
 
-export async function initI18n(): Promise<void> {
-  if (initialized) return;
-  const stored = await getStoredLanguage();
-  const lng: Language = stored ?? detectDeviceLanguage();
-  await i18n.use(initReactI18next).init({
-    resources: { ka: { translation: ka }, en: { translation: en }, de: { translation: de } },
-    lng,
-    fallbackLng: "ka",
-    interpolation: { escapeValue: false },
-    returnNull: false,
-    compatibilityJSON: "v4",
-  });
-  initialized = true;
+export function initI18n(): Promise<void> {
+  if (!initPromise) {
+    initPromise = (async () => {
+      const stored = await getStoredLanguage();
+      const lng: Language = stored ?? detectDeviceLanguage();
+      await i18n.use(initReactI18next).init({
+        resources: { ka: { translation: ka }, en: { translation: en }, de: { translation: de } },
+        lng,
+        fallbackLng: "ka",
+        interpolation: { escapeValue: false },
+        returnNull: false,
+        compatibilityJSON: "v4",
+      });
+    })();
+  }
+  return initPromise;
 }
 
 export async function changeLanguage(lang: Language): Promise<void> {

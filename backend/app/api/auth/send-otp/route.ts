@@ -1,11 +1,7 @@
 import { NextRequest } from "next/server";
-import { sendOtpSchema } from "@/lib/validators/auth";
+import { sendOtpSchema, identifierKey } from "@/lib/validators/auth";
 import { success, validationError, error } from "@/lib/responses";
-
-// In-memory OTP store for dev. In production, use Redis or SMS service.
-const otpStore = new Map<string, { code: string; expiresAt: Date }>();
-
-export { otpStore };
+import { otpStore } from "@/lib/otpStore";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,18 +11,17 @@ export async function POST(request: NextRequest) {
       return validationError(parsed.error.issues[0].message);
     }
 
-    const { phone } = parsed.data;
+    const key = identifierKey(parsed.data);
     const isDevMode = process.env.OTP_DEV_MODE === "true";
     const code = isDevMode ? "1234" : String(Math.floor(1000 + Math.random() * 9000));
 
-    otpStore.set(phone, {
+    otpStore.set(key, {
       code,
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
-    // In production: send SMS here
     if (isDevMode) {
-      console.log(`[DEV] OTP for ${phone}: ${code}`);
+      console.log(`[DEV] OTP for ${key}: ${code}`);
     }
 
     return success({ message: "OTP sent successfully" });

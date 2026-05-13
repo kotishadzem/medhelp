@@ -18,14 +18,26 @@
     "subtitle": "შეიყვანე ტელეფონის ნომერი — გამოგიგზავნით ერთჯერად კოდს.",
     "phoneLabel": "მობილური ნომერი",
     "phonePlaceholder": "555 12 34 56",
+    "emailLabel": "ელფოსტა",
+    "emailPlaceholder": "you@example.com",
+    "emailTooShort": "შეიყვანე სწორი ელფოსტა",
     "continue": "გაგრძელება",
     "haveAccount": "უკვე გაქვს ანგარიში?",
     "login": "შესვლა",
     "phoneTooShort": "შეიყვანე სრული ნომერი",
+    "method": {
+      "title": "როგორ გავაგრძელოთ?",
+      "subtitle": "ანგარიში ან მობილური ნომრით, ან ელფოსტით.",
+      "phone": "მობილური ნომერი",
+      "phoneSubtitle": "SMS-ით კოდი ნებისმიერი ქვეყნიდან",
+      "email": "ელფოსტა",
+      "emailSubtitle": "კოდი მიიღე ფოსტაზე"
+    },
+    "subtitleEmail": "შეიყვანე ელფოსტა — გამოგიგზავნით ერთჯერად კოდს.",
     "otp": {
       "eyebrow": "VERIFICATION",
       "title": "შეიყვანე კოდი",
-      "subtitle": "გავუგზავნეთ ერთჯერადი 4-ციფრიანი კოდი +995 {{phone}}-ზე.",
+      "subtitle": "გავუგზავნეთ ერთჯერადი 4-ციფრიანი კოდი {{target}}-ზე.",
       "verifying": "ვამოწმებთ...",
       "resend": "კოდის თავიდან გამოგზავნა",
       "changeNumber": "ნომრის შეცვლა"
@@ -51,9 +63,13 @@
     "enterPin": "შეიყვანე PIN კოდი",
     "pinInvalid": "PIN კოდი არასწორია",
     "failed": "ვერ მოხერხდა შესვლა — სცადე თავიდან",
-    "switchNumber": "სხვა ნომრით შესვლა",
+    "switchNumber": "სხვა ანგარიშზე გადასვლა",
     "biometric": "შესვლა MedHelp-ში",
     "cancel": "გაუქმება"
+  },
+  "country": {
+    "title": "აირჩიე ქვეყანა",
+    "search": "ძებნა..."
   },
   "tabs": {
     "today": "დღეს",

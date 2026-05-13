@@ -14,7 +14,7 @@ import { colors, fontSize, radius, spacing } from "@/lib/theme";
 export default function Login() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { storedPhone, loginWithPin, forgetPhone } = useAuth();
+  const { storedIdentifier, loginWithPin, forgetIdentifier } = useAuth();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,11 +34,15 @@ export default function Login() {
 
   const submit = useCallback(
     async (entered: string) => {
-      if (!storedPhone) return;
+      if (!storedIdentifier) return;
       setLoading(true);
       setError(null);
       try {
-        await loginWithPin(storedPhone, entered);
+        const id =
+          storedIdentifier.method === "phone"
+            ? { phone: storedIdentifier.value }
+            : { email: storedIdentifier.value };
+        await loginWithPin(id, entered);
       } catch (e) {
         setPin("");
         if (e instanceof ApiError && e.code === "INVALID_CREDENTIALS") {
@@ -50,7 +54,7 @@ export default function Login() {
         setLoading(false);
       }
     },
-    [storedPhone, loginWithPin, t]
+    [storedIdentifier, loginWithPin, t]
   );
 
   useEffect(() => {
@@ -66,10 +70,15 @@ export default function Login() {
     });
   }, [biometricAvailable, t]);
 
-  if (!storedPhone) {
+  if (!storedIdentifier) {
     router.replace("/(auth)/register");
     return null;
   }
+
+  const display =
+    storedIdentifier.method === "phone"
+      ? maskPhone(storedIdentifier.value)
+      : maskEmail(storedIdentifier.value);
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
@@ -79,7 +88,7 @@ export default function Login() {
             <Text style={styles.avatarText}>+</Text>
           </View>
           <Text style={styles.greeting}>{t("login.greeting")}</Text>
-          <Text style={styles.phone}>{maskPhone(storedPhone)}</Text>
+          <Text style={styles.phone}>{display}</Text>
         </View>
 
         <View style={styles.center}>
@@ -106,7 +115,7 @@ export default function Login() {
             )}
             <Pressable
               onPress={async () => {
-                await forgetPhone();
+                await forgetIdentifier();
                 router.replace("/(auth)/register");
               }}
               hitSlop={10}
@@ -118,6 +127,13 @@ export default function Login() {
       </View>
     </SafeAreaView>
   );
+}
+
+function maskEmail(email: string): string {
+  const [name, domain] = email.split("@");
+  if (!domain) return email;
+  if (name.length <= 2) return `${name}@${domain}`;
+  return `${name[0]}${"⋯"}${name.slice(-1)}@${domain}`;
 }
 
 const styles = StyleSheet.create({

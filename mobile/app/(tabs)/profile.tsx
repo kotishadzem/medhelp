@@ -79,7 +79,11 @@ export default function Profile() {
                   ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
                   : t("profile.noName")}
               </Text>
-              <Text style={styles.phone}>+995 {formatPhoneForDisplay(user?.phone ?? "")}</Text>
+              <Text style={styles.phone}>
+                {user?.phone
+                  ? `+ ${formatPhoneForDisplay(user.phone)}`
+                  : user?.email ?? ""}
+              </Text>
             </View>
           </View>
 

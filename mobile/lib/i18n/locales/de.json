@@ -18,14 +18,26 @@
     "subtitle": "Gib deine Telefonnummer ein — wir senden dir einen Einmalcode.",
     "phoneLabel": "Mobilnummer",
     "phonePlaceholder": "555 12 34 56",
+    "emailLabel": "E-Mail-Adresse",
+    "emailPlaceholder": "du@example.com",
+    "emailTooShort": "Bitte gültige E-Mail eingeben",
     "continue": "Weiter",
     "haveAccount": "Schon ein Konto?",
     "login": "Anmelden",
     "phoneTooShort": "Bitte vollständige Nummer eingeben",
+    "method": {
+      "title": "Wie möchtest du dich anmelden?",
+      "subtitle": "Mit Mobilnummer oder mit E-Mail-Adresse.",
+      "phone": "Mobilnummer",
+      "phoneSubtitle": "Code per SMS aus jedem Land",
+      "email": "E-Mail-Adresse",
+      "emailSubtitle": "Code an dein Postfach"
+    },
+    "subtitleEmail": "Gib deine E-Mail ein — wir senden dir einen Einmalcode.",
     "otp": {
       "eyebrow": "BESTÄTIGUNG",
       "title": "Code eingeben",
-      "subtitle": "Wir haben einen 4-stelligen Einmalcode an +995 {{phone}} gesendet.",
+      "subtitle": "Wir haben einen 4-stelligen Einmalcode an {{target}} gesendet.",
       "verifying": "Wird überprüft...",
       "resend": "Code erneut senden",
       "changeNumber": "Nummer ändern"
@@ -51,9 +63,13 @@
     "enterPin": "PIN eingeben",
     "pinInvalid": "PIN ist falsch",
     "failed": "Anmeldung fehlgeschlagen — erneut versuchen",
-    "switchNumber": "Mit anderer Nummer anmelden",
+    "switchNumber": "Mit anderem Konto anmelden",
     "biometric": "Anmelden bei MedHelp",
     "cancel": "Abbrechen"
+  },
+  "country": {
+    "title": "Land auswählen",
+    "search": "Suchen..."
   },
   "tabs": {
     "today": "Heute",

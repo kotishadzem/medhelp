@@ -4,7 +4,8 @@ export type IntakeStatus = "PENDING" | "TAKEN" | "MISSED" | "SKIPPED";
 
 export type User = {
   id: string;
-  phone: string;
+  phone: string | null;
+  email: string | null;
   firstName: string | null;
   lastName: string | null;
   role: UserRole;

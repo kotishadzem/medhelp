@@ -11,12 +11,15 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/Button";
 import { CodeCells, PinDots, PinPad } from "@/components/PinPad";
+import { CountryPicker } from "@/components/CountryPicker";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { authApi } from "@/lib/api/endpoints";
+import { authApi, type Identifier } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
 import { formatPhoneForDisplay, normalizePhone } from "@/lib/phone";
+import { COUNTRIES, DEFAULT_COUNTRY, type Country } from "@/lib/countries";
 import {
   changeLanguage,
   SUPPORTED_LANGUAGES,
@@ -24,30 +27,57 @@ import {
 } from "@/lib/i18n";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
-type Step = "language" | "phone" | "otp" | "pin" | "pin-confirm";
+type Method = "phone" | "email";
+type Step = "language" | "method" | "phone" | "email" | "otp" | "pin" | "pin-confirm";
 
 export default function Register() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
   const { loginWithOtp, setupPin, refreshMe, pendingPinSetup, user } = useAuth();
+
   const [step, setStep] = useState<Step>(pendingPinSetup ? "pin" : "language");
-  const [phone, setPhone] = useState(pendingPinSetup ? user?.phone ?? "" : "");
+  const [method, setMethod] = useState<Method>("phone");
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSendOtp = async () => {
+  const currentIdentifier = (): Identifier =>
+    method === "phone"
+      ? { phone: `${country.dial}${normalizePhone(phone)}` }
+      : { email: email.trim() };
+
+  const displayTarget = (): string =>
+    method === "phone"
+      ? `${country.dial} ${formatPhoneForDisplay(phone)}`
+      : email.trim();
+
+  const handleSendOtpPhone = async () => {
     const normalized = normalizePhone(phone);
-    if (normalized.length < 9) {
+    if (normalized.length < 6) {
       setError(t("register.phoneTooShort"));
       return;
     }
+    await sendOtp();
+  };
+
+  const handleSendOtpEmail = async () => {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError(t("register.emailTooShort"));
+      return;
+    }
+    await sendOtp();
+  };
+
+  const sendOtp = async () => {
     setError(null);
     setLoading(true);
     try {
-      await authApi.sendOtp(normalized);
+      await authApi.sendOtp(currentIdentifier());
       setStep("otp");
     } catch (e) {
       setError(messageFor(e, t));
@@ -60,7 +90,7 @@ export default function Register() {
     setError(null);
     setLoading(true);
     try {
-      const res = await loginWithOtp(normalizePhone(phone), entered);
+      const res = await loginWithOtp(currentIdentifier(), entered);
       if (res.hasPinSet) return;
       setStep("pin");
     } catch (e) {
@@ -69,11 +99,6 @@ export default function Register() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePinComplete = () => {
-    setError(null);
-    setStep("pin-confirm");
   };
 
   const handlePinConfirmComplete = async (entered: string) => {
@@ -106,7 +131,10 @@ export default function Register() {
   }, [step, code, loading]);
 
   useEffect(() => {
-    if (step === "pin" && pin.length === 4) handlePinComplete();
+    if (step === "pin" && pin.length === 4) {
+      setError(null);
+      setStep("pin-confirm");
+    }
   }, [step, pin]);
 
   useEffect(() => {
@@ -126,25 +154,50 @@ export default function Register() {
               onSelect={async (lang) => {
                 await changeLanguage(lang);
               }}
-              onContinue={() => setStep("phone")}
+              onContinue={() => setStep("method")}
+            />
+          )}
+
+          {step === "method" && (
+            <MethodStep
+              onPick={(m) => {
+                setMethod(m);
+                setStep(m);
+                setError(null);
+              }}
+              onBack={() => setStep("language")}
             />
           )}
 
           {step === "phone" && (
             <PhoneStep
+              country={country}
+              onPickCountry={setCountry}
               phone={phone}
               onChangePhone={setPhone}
               error={error}
               loading={loading}
-              onSubmit={handleSendOtp}
+              onSubmit={handleSendOtpPhone}
               onSwitchLogin={() => router.replace("/(auth)/login")}
-              onBack={() => setStep("language")}
+              onBack={() => setStep("method")}
+            />
+          )}
+
+          {step === "email" && (
+            <EmailStep
+              email={email}
+              onChangeEmail={setEmail}
+              error={error}
+              loading={loading}
+              onSubmit={handleSendOtpEmail}
+              onSwitchLogin={() => router.replace("/(auth)/login")}
+              onBack={() => setStep("method")}
             />
           )}
 
           {step === "otp" && (
             <OtpStep
-              phone={phone}
+              target={displayTarget()}
               code={code}
               onChange={setCode}
               error={error}
@@ -153,7 +206,7 @@ export default function Register() {
                 setCode("");
                 setError(null);
                 try {
-                  await authApi.sendOtp(normalizePhone(phone));
+                  await authApi.sendOtp(currentIdentifier());
                 } catch (e) {
                   setError(messageFor(e, t));
                 }
@@ -161,7 +214,7 @@ export default function Register() {
               onBack={() => {
                 setCode("");
                 setError(null);
-                setStep("phone");
+                setStep(method);
               }}
             />
           )}
@@ -229,11 +282,9 @@ function LanguageStep({
                 pressed && { opacity: 0.85 },
               ]}
             >
-              <Text style={styles.flag}>{FLAG[lang]}</Text>
+              <Text style={styles.flag}>{LANG_FLAG[lang]}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.langName, active && styles.langNameActive]}>
-                  {NATIVE_NAMES[lang]}
-                </Text>
+                <Text style={styles.langName}>{NATIVE_NAMES[lang]}</Text>
                 <Text style={styles.langTranslated}>{t(`language.names.${lang}`)}</Text>
               </View>
               {active && <View style={styles.langDot} />}
@@ -249,7 +300,76 @@ function LanguageStep({
   );
 }
 
+function MethodStep({
+  onPick,
+  onBack,
+}: {
+  onPick: (m: Method) => void;
+  onBack: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.stepContainer}>
+      <View style={styles.header}>
+        <Pressable onPress={onBack} hitSlop={10} style={styles.backLink}>
+          <Text style={styles.backLinkText}>‹ {t("language.title")}</Text>
+        </Pressable>
+        <Text style={styles.eyebrow}>MEDHELP</Text>
+        <Text style={styles.title}>{t("register.method.title")}</Text>
+        <Text style={styles.subtitle}>{t("register.method.subtitle")}</Text>
+      </View>
+
+      <View style={{ gap: spacing.md }}>
+        <MethodCard
+          icon="call-outline"
+          title={t("register.method.phone")}
+          subtitle={t("register.method.phoneSubtitle")}
+          onPress={() => onPick("phone")}
+        />
+        <MethodCard
+          icon="mail-outline"
+          title={t("register.method.email")}
+          subtitle={t("register.method.emailSubtitle")}
+          onPress={() => onPick("email")}
+        />
+      </View>
+
+      <View style={{ flex: 0 }} />
+    </View>
+  );
+}
+
+function MethodCard({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.methodCard, pressed && { opacity: 0.85 }]}
+    >
+      <View style={styles.methodIcon}>
+        <Ionicons name={icon} size={22} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.methodTitle}>{title}</Text>
+        <Text style={styles.methodSubtitle}>{subtitle}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+    </Pressable>
+  );
+}
+
 function PhoneStep({
+  country,
+  onPickCountry,
   phone,
   onChangePhone,
   error,
@@ -258,6 +378,8 @@ function PhoneStep({
   onSwitchLogin,
   onBack,
 }: {
+  country: Country;
+  onPickCountry: (c: Country) => void;
   phone: string;
   onChangePhone: (v: string) => void;
   error: string | null;
@@ -268,6 +390,8 @@ function PhoneStep({
 }) {
   const { t } = useTranslation();
   const inputRef = useRef<TextInput>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   useEffect(() => {
     const tt = setTimeout(() => inputRef.current?.focus(), 250);
     return () => clearTimeout(tt);
@@ -277,7 +401,7 @@ function PhoneStep({
     <View style={styles.stepContainer}>
       <View style={styles.header}>
         <Pressable onPress={onBack} hitSlop={10} style={styles.backLink}>
-          <Text style={styles.backLinkText}>‹ {t("language.title")}</Text>
+          <Text style={styles.backLinkText}>‹ {t("register.method.title")}</Text>
         </Pressable>
         <Text style={styles.eyebrow}>{t("register.eyebrow")}</Text>
         <Text style={styles.title}>{t("register.title")}</Text>
@@ -287,7 +411,15 @@ function PhoneStep({
       <View style={styles.fieldGroup}>
         <Text style={styles.label}>{t("register.phoneLabel")}</Text>
         <View style={styles.phoneField}>
-          <Text style={styles.dialCode}>+995</Text>
+          <Pressable
+            onPress={() => setPickerOpen(true)}
+            style={({ pressed }) => [styles.countryButton, pressed && { opacity: 0.7 }]}
+            hitSlop={6}
+          >
+            <Text style={styles.flag}>{country.flag}</Text>
+            <Text style={styles.dialCode}>{country.dial}</Text>
+            <Ionicons name="chevron-down" size={14} color={colors.textMuted} />
+          </Pressable>
           <View style={styles.divider} />
           <TextInput
             ref={inputRef}
@@ -297,7 +429,82 @@ function PhoneStep({
             placeholder={t("register.phonePlaceholder")}
             placeholderTextColor={colors.textDim}
             style={styles.phoneInput}
-            maxLength={13}
+            maxLength={16}
+            returnKeyType="done"
+            onSubmitEditing={onSubmit}
+          />
+        </View>
+        {error && <Text style={styles.errorText}>{error}</Text>}
+      </View>
+
+      <View style={styles.footer}>
+        <Button label={t("register.continue")} onPress={onSubmit} loading={loading} />
+        <Pressable onPress={onSwitchLogin} style={styles.linkRow}>
+          <Text style={styles.linkText}>{t("register.haveAccount")}</Text>
+          <Text style={styles.linkAction}>{t("register.login")}</Text>
+        </Pressable>
+      </View>
+
+      <CountryPicker
+        visible={pickerOpen}
+        selected={country}
+        onClose={() => setPickerOpen(false)}
+        onSelect={onPickCountry}
+      />
+    </View>
+  );
+}
+
+function EmailStep({
+  email,
+  onChangeEmail,
+  error,
+  loading,
+  onSubmit,
+  onSwitchLogin,
+  onBack,
+}: {
+  email: string;
+  onChangeEmail: (v: string) => void;
+  error: string | null;
+  loading: boolean;
+  onSubmit: () => void;
+  onSwitchLogin: () => void;
+  onBack: () => void;
+}) {
+  const { t } = useTranslation();
+  const inputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    const tt = setTimeout(() => inputRef.current?.focus(), 250);
+    return () => clearTimeout(tt);
+  }, []);
+
+  return (
+    <View style={styles.stepContainer}>
+      <View style={styles.header}>
+        <Pressable onPress={onBack} hitSlop={10} style={styles.backLink}>
+          <Text style={styles.backLinkText}>‹ {t("register.method.title")}</Text>
+        </Pressable>
+        <Text style={styles.eyebrow}>{t("register.eyebrow")}</Text>
+        <Text style={styles.title}>{t("register.title")}</Text>
+        <Text style={styles.subtitle}>{t("register.subtitleEmail")}</Text>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.label}>{t("register.emailLabel")}</Text>
+        <View style={styles.emailField}>
+          <Ionicons name="mail-outline" size={20} color={colors.textMuted} />
+          <TextInput
+            ref={inputRef}
+            value={email}
+            onChangeText={onChangeEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoComplete="email"
+            placeholder={t("register.emailPlaceholder")}
+            placeholderTextColor={colors.textDim}
+            style={styles.emailInput}
             returnKeyType="done"
             onSubmitEditing={onSubmit}
           />
@@ -317,7 +524,7 @@ function PhoneStep({
 }
 
 function OtpStep({
-  phone,
+  target,
   code,
   onChange,
   error,
@@ -325,7 +532,7 @@ function OtpStep({
   onResend,
   onBack,
 }: {
-  phone: string;
+  target: string;
   code: string;
   onChange: (v: string) => void;
   error: string | null;
@@ -345,9 +552,7 @@ function OtpStep({
       <View style={styles.header}>
         <Text style={styles.eyebrow}>{t("register.otp.eyebrow")}</Text>
         <Text style={styles.title}>{t("register.otp.title")}</Text>
-        <Text style={styles.subtitle}>
-          {t("register.otp.subtitle", { phone: formatPhoneForDisplay(phone) })}
-        </Text>
+        <Text style={styles.subtitle}>{t("register.otp.subtitle", { target })}</Text>
       </View>
 
       <Pressable style={styles.codeArea} onPress={() => hiddenRef.current?.focus()}>
@@ -412,11 +617,7 @@ function PinStep({
   );
 }
 
-const FLAG: Record<Language, string> = {
-  ka: "🇬🇪",
-  en: "🇬🇧",
-  de: "🇩🇪",
-};
+const LANG_FLAG: Record<Language, string> = { ka: "🇬🇪", en: "🇬🇧", de: "🇩🇪" };
 
 const NATIVE_NAMES: Record<Language, string> = {
   ka: "ქართული",
@@ -472,10 +673,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
+    paddingLeft: spacing.sm,
+    paddingRight: spacing.md,
+    height: 60,
+  },
+  countryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  emailField: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     height: 60,
   },
-  dialCode: { color: colors.text, fontSize: fontSize.lg, fontWeight: "600" },
+  emailInput: { flex: 1, color: colors.text, fontSize: fontSize.lg },
+  dialCode: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
   divider: { width: 1, height: 28, backgroundColor: colors.border, marginHorizontal: spacing.md },
   phoneInput: {
     flex: 1,
@@ -504,9 +725,29 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   langCardActive: { borderColor: colors.primary, backgroundColor: colors.surfaceElevated },
-  flag: { fontSize: 32 },
+  flag: { fontSize: 24 },
   langName: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
-  langNameActive: { color: colors.text },
   langTranslated: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
   langDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.primary },
+
+  methodCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  methodIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  methodTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "700" },
+  methodSubtitle: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
 });
