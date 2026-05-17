@@ -19,7 +19,10 @@ if (isNativeAndSupported) {
   });
 }
 
-type NotifMap = Record<string, string>; // intakeId → notification identifier
+// Per intake we now schedule up to two notifications: a 30-min warning
+// and the at-time reminder. Each can have its own notification identifier.
+type Entry = { warn?: string; due?: string } | string;
+type NotifMap = Record<string, Entry>;
 
 async function readMap(): Promise<NotifMap> {
   try {
@@ -28,6 +31,15 @@ async function readMap(): Promise<NotifMap> {
   } catch {
     return {};
   }
+}
+
+function entryIdentifiers(entry: Entry | undefined): string[] {
+  if (!entry) return [];
+  if (typeof entry === "string") return [entry];
+  const out: string[] = [];
+  if (entry.warn) out.push(entry.warn);
+  if (entry.due) out.push(entry.due);
+  return out;
 }
 
 async function writeMap(map: NotifMap): Promise<void> {
@@ -80,26 +92,55 @@ export async function scheduleForMedication(
     const at = new Date(intake.scheduledAt).getTime();
     if (at <= now) continue;
 
+    const entry: { warn?: string; due?: string } = {};
+    const warnAt = at - 30 * 60 * 1000;
+    const channelId =
+      Platform.OS === "android" ? "medication-reminders" : undefined;
+    const body = `${medication.dosage}${
+      medication.instructions ? ` · ${medication.instructions}` : ""
+    }`;
+
+    // 30-minute warning (skip if already in the past)
+    if (warnAt > now) {
+      try {
+        entry.warn = await Notifications.scheduleNotificationAsync({
+          content: {
+            title: i18n.t("notification.warnTitle", { name: medication.name }),
+            body: i18n.t("notification.warnBody", { name: medication.name }),
+            sound: "default",
+            data: { intakeId: intake.id, medicationId: medication.id, kind: "warn" },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: new Date(warnAt),
+            channelId,
+          },
+        });
+      } catch {
+        // best-effort
+      }
+    }
+
+    // At-time reminder — ringer style: high importance + default sound
     try {
-      const identifier = await Notifications.scheduleNotificationAsync({
+      entry.due = await Notifications.scheduleNotificationAsync({
         content: {
           title: i18n.t("notification.title", { name: medication.name }),
-          body: `${medication.dosage}${
-            medication.instructions ? ` · ${medication.instructions}` : ""
-          }`,
+          body,
           sound: "default",
-          data: { intakeId: intake.id, medicationId: medication.id },
+          data: { intakeId: intake.id, medicationId: medication.id, kind: "due" },
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: new Date(intake.scheduledAt),
-          channelId: Platform.OS === "android" ? "medication-reminders" : undefined,
+          channelId,
         },
       });
-      map[intake.id] = identifier;
     } catch {
-      // best-effort — skip on failure
+      // best-effort
     }
+
+    if (entry.warn || entry.due) map[intake.id] = entry;
   }
 
   await writeMap(map);
@@ -109,12 +150,13 @@ export async function cancelForIntakes(intakeIds: string[]): Promise<void> {
   if (!isNativeAndSupported) return;
   const map = await readMap();
   for (const id of intakeIds) {
-    const identifier = map[id];
-    if (!identifier) continue;
-    try {
-      await Notifications.cancelScheduledNotificationAsync(identifier);
-    } catch {
-      // ignore
+    const ids = entryIdentifiers(map[id]);
+    for (const identifier of ids) {
+      try {
+        await Notifications.cancelScheduledNotificationAsync(identifier);
+      } catch {
+        // ignore
+      }
     }
     delete map[id];
   }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,7 +16,15 @@ import { medicationsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { cancelForIntakes } from "@/lib/notifications";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
-import { formatTimeHHMM, timePeriod } from "@/lib/format";
+import {
+  deriveIntakeStatus,
+  formatTimeHHMM,
+  isToday,
+  isTomorrow,
+  timePeriod,
+  ymdLocal,
+  type DerivedIntakeStatus,
+} from "@/lib/format";
 import type { IntakeWithMedication } from "@/lib/types";
 
 const PERIOD_ICON = {
@@ -30,37 +38,52 @@ export default function TodayScreen() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const todayQuery = useQuery({
-    queryKey: ["today"],
-    queryFn: medicationsApi.today,
+    queryKey: ["today", 2],
+    queryFn: () => medicationsApi.today(2),
   });
 
-  const groups = useMemo(() => {
+  // Re-render every minute so derived statuses (IMMINENT / MISSED) refresh.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Group by date → period
+  const grouped = useMemo(() => {
     const intakes = todayQuery.data?.intakes ?? [];
-    const buckets: Record<string, IntakeWithMedication[]> = {
-      morning: [],
-      afternoon: [],
-      evening: [],
-    };
+    const byDay: Record<string, IntakeWithMedication[]> = {};
     for (const i of intakes) {
-      buckets[timePeriod(i.scheduledAt)].push(i);
+      const key = ymdLocal(i.scheduledAt);
+      (byDay[key] ??= []).push(i);
     }
-    return buckets;
+    return Object.entries(byDay)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, items]) => ({
+        date,
+        periods: groupByPeriod(items),
+      }));
   }, [todayQuery.data]);
 
   const counts = useMemo(() => {
     const intakes = todayQuery.data?.intakes ?? [];
+    const todayOnly = intakes.filter((i) => isToday(i.scheduledAt));
     return {
-      total: intakes.length,
-      taken: intakes.filter((i) => i.status === "TAKEN").length,
-      pending: intakes.filter((i) => i.status === "PENDING").length,
+      total: todayOnly.length,
+      taken: todayOnly.filter((i) => i.status === "TAKEN").length,
+      pending: todayOnly.filter((i) => {
+        const d = deriveIntakeStatus(i.status, i.scheduledAt);
+        return d === "PENDING" || d === "IMMINENT";
+      }).length,
+      missed: todayOnly.filter((i) => deriveIntakeStatus(i.status, i.scheduledAt) === "MISSED")
+        .length,
     };
   }, [todayQuery.data]);
 
   const markTaken = useCallback(
     async (intake: IntakeWithMedication) => {
-      // Optimistic update
-      qc.setQueryData<{ date: string; intakes: IntakeWithMedication[] }>(
-        ["today"],
+      qc.setQueryData<{ date: string; days: number; intakes: IntakeWithMedication[] }>(
+        ["today", 2],
         (prev) =>
           prev
             ? {
@@ -76,32 +99,6 @@ export default function TodayScreen() {
       try {
         await medicationsApi.updateIntake(intake.medicationId, intake.id, "TAKEN");
         await cancelForIntakes([intake.id]);
-        qc.invalidateQueries({ queryKey: ["today"] });
-      } catch {
-        qc.invalidateQueries({ queryKey: ["today"] });
-      }
-    },
-    [qc]
-  );
-
-  const undo = useCallback(
-    async (intake: IntakeWithMedication) => {
-      qc.setQueryData<{ date: string; intakes: IntakeWithMedication[] }>(
-        ["today"],
-        (prev) =>
-          prev
-            ? {
-                ...prev,
-                intakes: prev.intakes.map((i) =>
-                  i.id === intake.id ? { ...i, status: "PENDING", takenAt: null } : i
-                ),
-              }
-            : prev
-      );
-      try {
-        // Reverting: there's no explicit "unmark" endpoint — we'd need backend support.
-        // For now, send SKIPPED back to TAKEN if user mistapped.
-        // Skipped for MVP — once TAKEN, stays TAKEN.
         qc.invalidateQueries({ queryKey: ["today"] });
       } catch {
         qc.invalidateQueries({ queryKey: ["today"] });
@@ -128,38 +125,48 @@ export default function TodayScreen() {
               ? t("today.greetingNamed", { name: user.firstName })
               : t("today.greeting")}
           </Text>
-          <Text style={styles.dateLine}>
-            {formatTodayLabel(todayQuery.data?.date, i18n.language)}
-          </Text>
+          <Text style={styles.dateLine}>{formatTodayLabel(i18n.language)}</Text>
         </View>
 
         <View style={styles.statRow}>
           <StatCard label={t("today.remaining")} value={counts.pending} tint={colors.warning} />
           <StatCard label={t("today.taken")} value={counts.taken} tint={colors.success} />
+          {counts.missed > 0 && (
+            <StatCard label={t("today.missed")} value={counts.missed} tint={colors.danger} />
+          )}
         </View>
 
         {todayQuery.isLoading ? (
           <View style={styles.center}>
             <ActivityIndicator color={colors.primary} />
           </View>
-        ) : counts.total === 0 ? (
+        ) : grouped.length === 0 ? (
           <EmptyToday />
         ) : (
-          (["morning", "afternoon", "evening"] as const).map((period) => {
-            const items = groups[period];
-            if (items.length === 0) return null;
-            return (
-              <View key={period} style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Ionicons name={PERIOD_ICON[period]} size={16} color={colors.textMuted} />
-                  <Text style={styles.sectionLabel}>{t(`today.period.${period}`)}</Text>
-                </View>
-                {items.map((intake) => (
-                  <IntakeRow key={intake.id} intake={intake} onMark={markTaken} onUndo={undo} />
-                ))}
-              </View>
-            );
-          })
+          grouped.map(({ date, periods }) => (
+            <View key={date} style={styles.daySection}>
+              <Text style={styles.dayHeader}>{dayLabel(date, t)}</Text>
+              {(["morning", "afternoon", "evening"] as const).map((period) => {
+                const items = periods[period];
+                if (items.length === 0) return null;
+                return (
+                  <View key={period} style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                      <Ionicons
+                        name={PERIOD_ICON[period]}
+                        size={16}
+                        color={colors.textMuted}
+                      />
+                      <Text style={styles.sectionLabel}>{t(`today.period.${period}`)}</Text>
+                    </View>
+                    {items.map((intake) => (
+                      <IntakeRow key={intake.id} intake={intake} onMark={markTaken} />
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          ))
         )}
       </ScrollView>
     </SafeAreaView>
@@ -178,20 +185,22 @@ function StatCard({ label, value, tint }: { label: string; value: number; tint: 
 function IntakeRow({
   intake,
   onMark,
-  onUndo,
 }: {
   intake: IntakeWithMedication;
   onMark: (i: IntakeWithMedication) => void;
-  onUndo: (i: IntakeWithMedication) => void;
 }) {
-  const isTaken = intake.status === "TAKEN";
-  const isMissed = intake.status === "MISSED";
+  const tints = useTint();
+  const derived = deriveIntakeStatus(intake.status, intake.scheduledAt);
+  const tint = tints[derived];
+  const isTaken = derived === "TAKEN";
+
   return (
-    <View style={[styles.intakeRow, isTaken && styles.intakeRowTaken]}>
+    <View style={[styles.intakeRow, tint && styles.intakeRowTinted, tint && { backgroundColor: tint.bg, borderColor: tint.border }]}>
       <View style={styles.timeCol}>
         <Text style={[styles.time, isTaken && styles.muted]}>
           {formatTimeHHMM(intake.scheduledAt)}
         </Text>
+        {tint?.label && <Text style={[styles.tag, { color: tint.tagColor }]}>{tint.label}</Text>}
       </View>
       <View style={styles.medCol}>
         <Text
@@ -206,11 +215,10 @@ function IntakeRow({
         </Text>
       </View>
       <Pressable
-        onPress={() => (isTaken ? onUndo(intake) : onMark(intake))}
+        onPress={() => (isTaken ? undefined : onMark(intake))}
         style={({ pressed }) => [
           styles.checkBtn,
           isTaken && styles.checkBtnTaken,
-          isMissed && styles.checkBtnMissed,
           pressed && { opacity: 0.7 },
         ]}
       >
@@ -235,20 +243,64 @@ function EmptyToday() {
   );
 }
 
-function formatTodayLabel(iso: string | undefined, lang: string): string {
-  if (!iso) return "";
-  const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString(localeFor(lang), {
+function groupByPeriod(intakes: IntakeWithMedication[]) {
+  const buckets: Record<"morning" | "afternoon" | "evening", IntakeWithMedication[]> = {
+    morning: [],
+    afternoon: [],
+    evening: [],
+  };
+  for (const i of intakes) buckets[timePeriod(i.scheduledAt)].push(i);
+  return buckets;
+}
+
+function formatTodayLabel(lang: string): string {
+  return new Date().toLocaleDateString(localeFor(lang), {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
 }
 
+function dayLabel(ymd: string, t: (k: string) => string): string {
+  const iso = `${ymd}T00:00:00`;
+  if (isToday(iso)) return t("today.dayToday");
+  if (isTomorrow(iso)) return t("today.dayTomorrow");
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+}
+
 function localeFor(lang: string): string {
   if (lang === "ka") return "ka-GE";
   if (lang === "de") return "de-DE";
   return "en-GB";
+}
+
+// Background tint per derived status — TAKEN gets a soft green, MISSED a red
+// tint, IMMINENT (within 30 min) an orange tint. Others stay neutral.
+function useTint() {
+  const { t } = useTranslation();
+  return useMemo<
+    Record<DerivedIntakeStatus, { bg: string; border: string; tagColor: string; label?: string } | null>
+  >(
+    () => ({
+      TAKEN: { bg: colors.success + "12", border: colors.success + "40", tagColor: colors.success },
+      MISSED: {
+        bg: colors.danger + "18",
+        border: colors.danger + "50",
+        tagColor: colors.danger,
+        label: t("today.missed"),
+      },
+      IMMINENT: {
+        bg: colors.warning + "18",
+        border: colors.warning + "50",
+        tagColor: colors.warning,
+        label: t("today.soon"),
+      },
+      PENDING: null,
+      SKIPPED: null,
+    }),
+    [t]
+  );
 }
 
 const styles = StyleSheet.create({
@@ -276,6 +328,15 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 32, fontWeight: "800", letterSpacing: -1 },
   statLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "500" },
 
+  daySection: { gap: spacing.md },
+  dayHeader: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+    paddingHorizontal: spacing.xs,
+  },
+
   section: { gap: spacing.sm },
   sectionHeader: {
     flexDirection: "row",
@@ -302,9 +363,10 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     gap: spacing.md,
   },
-  intakeRowTaken: { borderColor: colors.success + "40", backgroundColor: colors.success + "10" },
-  timeCol: { width: 56 },
+  intakeRowTinted: {},
+  timeCol: { width: 72, gap: 2 },
   time: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
+  tag: { fontSize: fontSize.xs, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase" },
   muted: { color: colors.textMuted },
   struck: { color: colors.textMuted },
   medCol: { flex: 1, gap: 2 },
@@ -321,7 +383,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   checkBtnTaken: { backgroundColor: colors.success, borderColor: colors.success },
-  checkBtnMissed: { borderColor: colors.danger },
 
   empty: { alignItems: "center", gap: spacing.sm, padding: spacing.xxl },
   emptyTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700", marginTop: spacing.md },

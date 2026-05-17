@@ -121,6 +121,7 @@
   },
   "tabs": {
     "today": "Heute",
+    "upcoming": "Anstehend",
     "medications": "Medikamente",
     "profile": "Profil"
   },
@@ -129,7 +130,11 @@
     "greetingNamed": "Hallo, {{name}}",
     "remaining": "Heute offen",
     "taken": "Eingenommen",
-    "emptyTitle": "Heute keine Dosen geplant",
+    "missed": "Verpasst",
+    "soon": "Bald",
+    "dayToday": "Heute",
+    "dayTomorrow": "Morgen",
+    "emptyTitle": "Nichts geplant",
     "emptySubtitle": "Füge ein Medikament hinzu — wir planen die Einnahmezeiten.",
     "period": {
       "morning": "Morgen",
@@ -238,6 +243,8 @@
   },
   "notification": {
     "title": "Zeit für {{name}}",
+    "warnTitle": "Bald — {{name}}",
+    "warnBody": "{{name}} steht in 30 Minuten an",
     "androidChannelName": "Medikamenten-Erinnerungen"
   },
   "family": {

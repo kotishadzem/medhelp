@@ -37,6 +37,43 @@ export function timePeriod(iso: string): "morning" | "afternoon" | "evening" {
   return "evening";
 }
 
+export function ymdLocal(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function isTomorrow(iso: string): boolean {
+  const d = new Date(iso);
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  return (
+    d.getFullYear() === t.getFullYear() &&
+    d.getMonth() === t.getMonth() &&
+    d.getDate() === t.getDate()
+  );
+}
+
+export type DerivedIntakeStatus =
+  | "TAKEN"
+  | "SKIPPED"
+  | "MISSED"
+  | "IMMINENT" // PENDING within the next 30 minutes
+  | "PENDING";
+
+export function deriveIntakeStatus(
+  status: "PENDING" | "TAKEN" | "MISSED" | "SKIPPED",
+  scheduledAt: string,
+  now: number = Date.now()
+): DerivedIntakeStatus {
+  if (status === "TAKEN") return "TAKEN";
+  if (status === "SKIPPED") return "SKIPPED";
+  if (status === "MISSED") return "MISSED";
+  const scheduled = new Date(scheduledAt).getTime();
+  if (scheduled < now) return "MISSED";
+  if (scheduled - now <= 30 * 60 * 1000) return "IMMINENT";
+  return "PENDING";
+}
+
 export function dateInputToISO(yyyymmdd: string): string {
   // Treat as local date midnight, return ISO
   const [y, m, d] = yyyymmdd.split("-").map(Number);

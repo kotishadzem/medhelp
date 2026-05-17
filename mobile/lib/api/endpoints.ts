@@ -67,9 +67,9 @@ export const medicationsApi = {
       `/medications${status ? `?status=${status}` : ""}`
     ),
 
-  today: () =>
-    apiRequest<{ date: string; intakes: IntakeWithMedication[] }>(
-      "/medications/today"
+  today: (days = 1) =>
+    apiRequest<{ date: string; days: number; intakes: IntakeWithMedication[] }>(
+      `/medications/today?days=${days}`
     ),
 
   detail: (id: string) =>

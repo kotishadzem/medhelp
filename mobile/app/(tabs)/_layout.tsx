@@ -30,7 +30,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: t("tabs.today"),
+          title: t("tabs.upcoming"),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name={focused ? "today" : "today-outline"} color={color} />
           ),

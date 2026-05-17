@@ -8,19 +8,18 @@ export async function GET(request: NextRequest) {
     const { user, error: authError } = requireAuth(request);
     if (authError) return authError;
 
-    // Get today's date range
+    const { searchParams } = new URL(request.url);
+    const days = Math.min(7, Math.max(1, Number(searchParams.get("days") ?? "1")));
+
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    const endOfWindow = new Date(startOfDay);
+    endOfWindow.setDate(endOfWindow.getDate() + days);
 
     const intakes = await prisma.medicationIntake.findMany({
       where: {
         medication: { userId: user.userId },
-        scheduledAt: {
-          gte: startOfDay,
-          lt: endOfDay,
-        },
+        scheduledAt: { gte: startOfDay, lt: endOfWindow },
       },
       include: {
         medication: {
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
     const yyyy = startOfDay.getFullYear();
     const mm = String(startOfDay.getMonth() + 1).padStart(2, "0");
     const dd = String(startOfDay.getDate()).padStart(2, "0");
-    return success({ date: `${yyyy}-${mm}-${dd}`, intakes });
+    return success({ date: `${yyyy}-${mm}-${dd}`, days, intakes });
   } catch {
     return error("Internal server error", 500);
   }

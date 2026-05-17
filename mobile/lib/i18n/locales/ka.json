@@ -121,6 +121,7 @@
   },
   "tabs": {
     "today": "დღეს",
+    "upcoming": "მიმდინარე",
     "medications": "მედიკამენტები",
     "profile": "პროფილი"
   },
@@ -129,7 +130,11 @@
     "greetingNamed": "გამარჯობა, {{name}}",
     "remaining": "დარჩა დღეს",
     "taken": "მიღებული",
-    "emptyTitle": "დღეს დოზა არ გაქვს",
+    "missed": "გამოტოვებული",
+    "soon": "მალე",
+    "dayToday": "დღეს",
+    "dayTomorrow": "ხვალ",
+    "emptyTitle": "მისაღები არ გაქვს",
     "emptySubtitle": "დაამატე მედიკამენტი — დაგეგმავ მისი მიღების დროებს.",
     "period": {
       "morning": "დილა",
@@ -238,6 +243,8 @@
   },
   "notification": {
     "title": "დროა მიიღო {{name}}",
+    "warnTitle": "მალე — {{name}}",
+    "warnBody": "30 წუთში მისაღებია {{name}}",
     "androidChannelName": "მედიკამენტის შეხსენებები"
   },
   "family": {

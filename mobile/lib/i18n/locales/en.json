@@ -121,6 +121,7 @@
   },
   "tabs": {
     "today": "Today",
+    "upcoming": "Upcoming",
     "medications": "Medications",
     "profile": "Profile"
   },
@@ -129,7 +130,11 @@
     "greetingNamed": "Hello, {{name}}",
     "remaining": "Left today",
     "taken": "Taken",
-    "emptyTitle": "Nothing scheduled today",
+    "missed": "Missed",
+    "soon": "Soon",
+    "dayToday": "Today",
+    "dayTomorrow": "Tomorrow",
+    "emptyTitle": "Nothing upcoming",
     "emptySubtitle": "Add a medication — we'll plan its dose times.",
     "period": {
       "morning": "Morning",
@@ -238,6 +243,8 @@
   },
   "notification": {
     "title": "Time to take {{name}}",
+    "warnTitle": "Soon — {{name}}",
+    "warnBody": "{{name}} is due in 30 minutes",
     "androidChannelName": "Medication reminders"
   },
   "family": {
