@@ -177,9 +177,10 @@
       "instructions": "ინსტრუქცია",
       "instructionsPlaceholder": "მაგ. ჭამის შემდეგ",
       "optional": "არასავალდებულო",
+      "startDate": "დაწყების თარიღი",
       "frequency": "დღეში რამდენჯერ?",
       "times": "დროები",
-      "duration": "ხანგრძლივობა",
+      "duration": "რამდენი ხანი",
       "days": "{{count}} დღე"
     },
     "totalIntakes": "{{start}} – {{end}} ({{total}} ჯამში)",

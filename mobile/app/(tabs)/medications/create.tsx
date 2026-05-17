@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { familyApi, medicationsApi } from "@/lib/api/endpoints";
 import { Button } from "@/components/Button";
+import { MonthCalendar } from "@/components/MonthCalendar";
 import { addDaysYMD, dateInputToISO, todayYMD } from "@/lib/format";
 import { scheduleForMedication } from "@/lib/notifications";
 import type { FamilyLink, FamilyParty } from "@/lib/types";
@@ -38,8 +39,9 @@ export default function CreateMedication() {
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
   const [instructions, setInstructions] = useState("");
-  const [frequency, setFrequency] = useState(1);
+  const [startYMD, setStartYMD] = useState<string>(todayYMD());
   const [durationDays, setDurationDays] = useState(7);
+  const [frequency, setFrequency] = useState(1);
   const [times, setTimes] = useState<string[]>(["09:00"]);
 
   // Auto-distribute times when frequency changes
@@ -48,7 +50,6 @@ export default function CreateMedication() {
     setTimes(DEFAULT_TIMES.slice(0, f));
   };
 
-  const startYMD = todayYMD();
   const endYMD = useMemo(() => addDaysYMD(startYMD, Math.max(1, durationDays) - 1), [startYMD, durationDays]);
 
   const mutation = useMutation({
@@ -169,6 +170,35 @@ export default function CreateMedication() {
             />
           </Section>
 
+          <Section title={t("medications.field.startDate")}>
+            <MonthCalendar value={startYMD} onChange={setStartYMD} />
+          </Section>
+
+          <Section title={t("medications.field.duration")}>
+            <View style={styles.segment}>
+              {[3, 7, 14, 30].map((d) => (
+                <Pressable
+                  key={d}
+                  onPress={() => setDurationDays(d)}
+                  style={[styles.segmentItem, durationDays === d && styles.segmentItemActive]}
+                >
+                  <Text
+                    style={[styles.segmentText, durationDays === d && styles.segmentTextActive]}
+                  >
+                    {t("medications.field.days", { count: d })}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={styles.helper}>
+              {t("medications.totalIntakes", {
+                start: startYMD,
+                end: endYMD,
+                total: durationDays * frequency,
+              })}
+            </Text>
+          </Section>
+
           <Section title={t("medications.field.frequency")}>
             <View style={styles.segment}>
               {[1, 2, 3, 4].map((n) => (
@@ -201,31 +231,6 @@ export default function CreateMedication() {
                 />
               ))}
             </View>
-          </Section>
-
-          <Section title={t("medications.field.duration")}>
-            <View style={styles.segment}>
-              {[3, 7, 14, 30].map((d) => (
-                <Pressable
-                  key={d}
-                  onPress={() => setDurationDays(d)}
-                  style={[styles.segmentItem, durationDays === d && styles.segmentItemActive]}
-                >
-                  <Text
-                    style={[styles.segmentText, durationDays === d && styles.segmentTextActive]}
-                  >
-                    {t("medications.field.days", { count: d })}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Text style={styles.helper}>
-              {t("medications.totalIntakes", {
-                start: startYMD,
-                end: endYMD,
-                total: durationDays * frequency,
-              })}
-            </Text>
           </Section>
         </ScrollView>
 

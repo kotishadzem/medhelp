@@ -177,9 +177,10 @@
       "instructions": "Hinweise",
       "instructionsPlaceholder": "z. B. Nach dem Essen",
       "optional": "Optional",
+      "startDate": "Startdatum",
       "frequency": "Wie oft am Tag?",
       "times": "Zeiten",
-      "duration": "Dauer",
+      "duration": "Wie lange",
       "days": "{{count}} Tage"
     },
     "totalIntakes": "{{start}} – {{end}} ({{total}} gesamt)",

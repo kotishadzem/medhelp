@@ -177,9 +177,10 @@
       "instructions": "Instructions",
       "instructionsPlaceholder": "e.g. After meals",
       "optional": "Optional",
+      "startDate": "Start date",
       "frequency": "How many times a day?",
       "times": "Times",
-      "duration": "Duration",
+      "duration": "How long",
       "days": "{{count}} days"
     },
     "totalIntakes": "{{start}} – {{end}} ({{total}} total)",
