@@ -301,9 +301,9 @@ const styles = StyleSheet.create({
   },
   rowPending: { opacity: 0.8 },
 
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.lg },
   card: {
-    flexBasis: "48%",
+    flexBasis: "46%",
     flexGrow: 1,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
