@@ -8,6 +8,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
 import { AuthProvider, useAuth } from "@/lib/auth/AuthContext";
+import { SettingsProvider } from "@/lib/settings/SettingsContext";
 import { initI18n } from "@/lib/i18n";
 import { colors, fontSize, spacing } from "@/lib/theme";
 
@@ -22,10 +23,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <StatusBar style="light" />
-            {i18nReady ? <RootNavigator /> : <SplashView />}
-          </AuthProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <StatusBar style="light" />
+              {i18nReady ? <RootNavigator /> : <SplashView />}
+            </AuthProvider>
+          </SettingsProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

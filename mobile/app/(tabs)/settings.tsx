@@ -20,6 +20,12 @@ import { Button } from "@/components/Button";
 import { authApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { changeLanguage, SUPPORTED_LANGUAGES, type Language } from "@/lib/i18n";
+import {
+  MED_FONT_MAX,
+  MED_FONT_MIN,
+  medNameFontSize,
+  useMedFontScale,
+} from "@/lib/settings/SettingsContext";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 const FLAG: Record<Language, string> = { ka: "🇬🇪", en: "🇬🇧", de: "🇩🇪" };
@@ -38,6 +44,8 @@ export default function Settings() {
   const [firstName, setFirstName] = useState(user?.firstName ?? "");
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [showFontPicker, setShowFontPicker] = useState(false);
+  const { medFontScale, setMedFontScale } = useMedFontScale();
 
   const save = useMutation({
     mutationFn: () =>
@@ -140,8 +148,71 @@ export default function Settings() {
             }
             onPress={() => setShowLangPicker(true)}
           />
+
+          <Row
+            icon="text-outline"
+            label={t("settings.medFontSize")}
+            sublabel={t("settings.medFontSizeValue", { n: medFontScale })}
+            onPress={() => setShowFontPicker(true)}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={showFontPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFontPicker(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowFontPicker(false)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>{t("settings.medFontSize")}</Text>
+            <View style={styles.fontGrid}>
+              {Array.from({ length: MED_FONT_MAX - MED_FONT_MIN + 1 }).map((_, i) => {
+                const n = MED_FONT_MIN + i;
+                const active = n === medFontScale;
+                return (
+                  <Pressable
+                    key={n}
+                    onPress={async () => {
+                      await setMedFontScale(n);
+                    }}
+                    style={({ pressed }) => [
+                      styles.fontChip,
+                      active && styles.fontChipActive,
+                      pressed && { opacity: 0.85 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.fontChipText,
+                        active && styles.fontChipTextActive,
+                      ]}
+                    >
+                      {n}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View style={styles.fontPreviewCard}>
+              <Text style={styles.fontPreviewLabel}>
+                {t("settings.medFontPreviewLabel")}
+              </Text>
+              <Text
+                style={[
+                  styles.fontPreviewName,
+                  { fontSize: medNameFontSize(medFontScale) },
+                ]}
+                numberOfLines={1}
+              >
+                {t("settings.medFontPreviewName")}
+              </Text>
+              <Text style={styles.fontPreviewMeta}>500 მგ · 3x/დღე</Text>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={showLangPicker}
@@ -337,4 +408,37 @@ const styles = StyleSheet.create({
   },
   langRowActive: { borderColor: colors.primary },
   langName: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+
+  fontGrid: { flexDirection: "row", gap: spacing.sm, marginVertical: spacing.md },
+  fontChip: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.bg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fontChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  fontChipText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: "700" },
+  fontChipTextActive: { color: colors.bg },
+
+  fontPreviewCard: {
+    backgroundColor: colors.bg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  fontPreviewLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  fontPreviewName: { color: colors.text, fontWeight: "700" },
+  fontPreviewMeta: { color: colors.textMuted, fontSize: fontSize.sm },
 });

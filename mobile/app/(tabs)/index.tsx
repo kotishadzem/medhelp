@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { medicationsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { medNameFontSize, useMedFontScale } from "@/lib/settings/SettingsContext";
 import { cancelForIntakes } from "@/lib/notifications";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import {
@@ -191,6 +192,7 @@ function IntakeRow({
   onMark: (i: IntakeWithMedication) => void;
 }) {
   const tints = useTint();
+  const { medFontScale } = useMedFontScale();
   const derived = deriveIntakeStatus(intake.status, intake.scheduledAt);
   const tint = tints[derived];
   const isTaken = derived === "TAKEN";
@@ -205,7 +207,11 @@ function IntakeRow({
       </View>
       <View style={styles.medCol}>
         <Text
-          style={[styles.medName, isTaken && styles.struck]}
+          style={[
+            styles.medName,
+            { fontSize: medNameFontSize(medFontScale) },
+            isTaken && styles.struck,
+          ]}
           numberOfLines={1}
         >
           {intake.medication.name}

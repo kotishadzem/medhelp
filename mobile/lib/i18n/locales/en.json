@@ -74,7 +74,11 @@
   "settings": {
     "title": "Settings",
     "nameSection": "Name",
-    "editName": "Edit name"
+    "editName": "Edit name",
+    "medFontSize": "Medication font size",
+    "medFontSizeValue": "Size {{n}}",
+    "medFontPreviewLabel": "Preview",
+    "medFontPreviewName": "Amoxicillin"
   },
   "quickUnlockSettings": {
     "title": "Quick sign-in",

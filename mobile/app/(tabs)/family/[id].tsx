@@ -17,12 +17,14 @@ import { ApiError } from "@/lib/api/client";
 import { IntakeBadge, MedicationBadge } from "@/components/StatusBadge";
 import { formatTimeHHMM, timePeriod } from "@/lib/format";
 import type { FamilyParty, IntakeWithMedication, Medication } from "@/lib/types";
+import { medNameFontSize, useMedFontScale } from "@/lib/settings/SettingsContext";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 export default function FamilyOverview() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
+  const { medFontScale } = useMedFontScale();
   const query = useQuery({
     queryKey: ["family", "overview", id],
     queryFn: () => familyApi.overview(id!),
@@ -131,7 +133,10 @@ export default function FamilyOverview() {
                   {items.map((i) => (
                     <View key={i.id} style={styles.intakeRow}>
                       <Text style={styles.intakeTime}>{formatTimeHHMM(i.scheduledAt)}</Text>
-                      <Text style={styles.intakeName} numberOfLines={1}>
+                      <Text
+                        style={[styles.intakeName, { fontSize: medNameFontSize(medFontScale) }]}
+                        numberOfLines={1}
+                      >
                         {i.medication.name}
                       </Text>
                       <IntakeBadge status={i.status} />
@@ -158,10 +163,14 @@ export default function FamilyOverview() {
 
 function MedicationRow({ m }: { m: Medication }) {
   const { t } = useTranslation();
+  const { medFontScale } = useMedFontScale();
   return (
     <View style={styles.medCard}>
       <View style={styles.medHead}>
-        <Text style={styles.medName} numberOfLines={1}>
+        <Text
+          style={[styles.medName, { fontSize: medNameFontSize(medFontScale) }]}
+          numberOfLines={1}
+        >
           {m.name}
         </Text>
         <MedicationBadge status={m.status} />

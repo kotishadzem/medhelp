@@ -17,6 +17,7 @@ import { medicationsApi } from "@/lib/api/endpoints";
 import type { Medication, MedicationStatus } from "@/lib/types";
 import { MedicationBadge } from "@/components/StatusBadge";
 import { formatDateShort } from "@/lib/format";
+import { medNameFontSize, useMedFontScale } from "@/lib/settings/SettingsContext";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 const FILTERS: { key: "ALL" | MedicationStatus; tKey: string }[] = [
@@ -100,13 +101,17 @@ export default function MedicationsList() {
 
 function MedRow({ medication }: { medication: Medication }) {
   const { t } = useTranslation();
+  const { medFontScale } = useMedFontScale();
   return (
     <Link href={`/(tabs)/medications/${medication.id}` as Href} asChild>
       <Pressable
         style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
       >
         <View style={styles.cardHead}>
-          <Text style={styles.medName} numberOfLines={1}>
+          <Text
+            style={[styles.medName, { fontSize: medNameFontSize(medFontScale) }]}
+            numberOfLines={1}
+          >
             {medication.name}
           </Text>
           <MedicationBadge status={medication.status} />

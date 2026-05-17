@@ -74,7 +74,11 @@
   "settings": {
     "title": "პარამეტრები",
     "nameSection": "სახელი",
-    "editName": "სახელის შეცვლა"
+    "editName": "სახელის შეცვლა",
+    "medFontSize": "მედიკამენტის შრიფტი",
+    "medFontSizeValue": "ზომა {{n}}",
+    "medFontPreviewLabel": "გადახედვა",
+    "medFontPreviewName": "ამოქსიცილინი"
   },
   "quickUnlockSettings": {
     "title": "სწრაფი შესვლა",

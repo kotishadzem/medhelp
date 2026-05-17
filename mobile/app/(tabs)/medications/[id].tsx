@@ -18,6 +18,7 @@ import {
   rescheduleMedication,
 } from "@/lib/notifications";
 import { confirm } from "@/lib/confirm";
+import { medNameFontSize, useMedFontScale } from "@/lib/settings/SettingsContext";
 import type { MedicationStatus } from "@/lib/types";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import { useTranslation } from "react-i18next";
@@ -33,6 +34,7 @@ export default function MedicationDetail() {
   const router = useRouter();
   const qc = useQueryClient();
   const { t } = useTranslation();
+  const { medFontScale } = useMedFontScale();
 
   const query = useQuery({
     queryKey: ["medications", "detail", id],
@@ -120,7 +122,9 @@ export default function MedicationDetail() {
       <ScrollView contentContainerStyle={styles.body}>
         <View style={styles.card}>
           <View style={styles.cardHead}>
-            <Text style={styles.medName}>{m.name}</Text>
+            <Text style={[styles.medName, { fontSize: medNameFontSize(medFontScale) }]}>
+              {m.name}
+            </Text>
             <MedicationBadge status={m.status} />
           </View>
           <Text style={styles.medDosage}>{m.dosage}</Text>
