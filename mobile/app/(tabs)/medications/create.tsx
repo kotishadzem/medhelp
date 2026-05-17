@@ -305,11 +305,12 @@ function Input(props: React.ComponentProps<typeof TextInput>) {
 
 function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [draft, setDraft] = useState(value);
+  const [focused, setFocused] = useState(false);
 
-  // Sync from outside when the parent resets the slot.
+  // Sync from outside when the parent resets the slot — but only when not actively typing.
   useEffect(() => {
-    setDraft(value);
-  }, [value]);
+    if (!focused) setDraft(value);
+  }, [value, focused]);
 
   // Normalize "HHMM" / "HH:MM" / partial into "HH:MM", clamped to 23:59.
   const normalize = (raw: string): string | null => {
@@ -329,10 +330,10 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
 
-  // Live formatter: pretty as the user types, no truncation.
+  // Live formatter while user types. Field is cleared on focus so digits
+  // accumulate left-to-right: "1" → "1", "14" → "14", "145" → "14:5", "1456" → "14:56".
   const formatDraft = (raw: string): string => {
-    let digits = raw.replace(/\D/g, "");
-    if (digits.length > 4) digits = digits.slice(-4);
+    let digits = raw.replace(/\D/g, "").slice(0, 4);
     if (digits.length === 0) return "";
     if (digits.length <= 2) return digits;
     return `${digits.slice(0, 2)}:${digits.slice(2)}`;
@@ -343,6 +344,10 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
       <Ionicons name="time-outline" size={18} color={colors.textMuted} />
       <TextInput
         value={draft}
+        onFocus={() => {
+          setFocused(true);
+          setDraft(""); // clear so the user types fresh; placeholder shows the old time
+        }}
         onChangeText={(text) => {
           const formatted = formatDraft(text);
           setDraft(formatted);
@@ -350,20 +355,21 @@ function TimePicker({ value, onChange }: { value: string; onChange: (v: string) 
           if (norm) onChange(norm);
         }}
         onBlur={() => {
+          setFocused(false);
           const norm = normalize(draft);
           if (norm) {
             setDraft(norm);
             onChange(norm);
           } else {
+            // user opened the field but typed nothing — restore the previous value
             setDraft(value);
           }
         }}
         keyboardType="number-pad"
         inputMode="numeric"
-        placeholder="08:30"
+        placeholder={value || "08:30"}
         placeholderTextColor={colors.textDim}
         maxLength={5}
-        selectTextOnFocus
         style={styles.timeText}
       />
     </View>
