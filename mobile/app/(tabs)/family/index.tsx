@@ -146,9 +146,6 @@ export default function FamilyList() {
                         <Text style={styles.cardName} numberOfLines={1}>
                           {link.customName}
                         </Text>
-                        <Text style={styles.cardSub} numberOfLines={1}>
-                          {partyDisplay(link.target)}
-                        </Text>
                       </Pressable>
                     </Link>
                   ))}

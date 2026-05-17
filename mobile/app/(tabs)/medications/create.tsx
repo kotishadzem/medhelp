@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -18,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { familyApi, medicationsApi } from "@/lib/api/endpoints";
 import { Button } from "@/components/Button";
 import { MonthCalendar } from "@/components/MonthCalendar";
-import { addDaysYMD, dateInputToISO, todayYMD } from "@/lib/format";
+import { addDaysYMD, dateInputToISO, formatDateLong, todayYMD } from "@/lib/format";
 import { scheduleForMedication } from "@/lib/notifications";
 import type { FamilyLink, FamilyParty } from "@/lib/types";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
@@ -40,6 +41,7 @@ export default function CreateMedication() {
   const [dosage, setDosage] = useState("");
   const [instructions, setInstructions] = useState("");
   const [startYMD, setStartYMD] = useState<string>(todayYMD());
+  const [showCalendar, setShowCalendar] = useState(false);
   const [durationDays, setDurationDays] = useState(7);
   const [frequency, setFrequency] = useState(1);
   const [times, setTimes] = useState<string[]>(["09:00"]);
@@ -171,7 +173,14 @@ export default function CreateMedication() {
           </Section>
 
           <Section title={t("medications.field.startDate")}>
-            <MonthCalendar value={startYMD} onChange={setStartYMD} />
+            <Pressable
+              onPress={() => setShowCalendar(true)}
+              style={({ pressed }) => [styles.dateButton, pressed && { opacity: 0.85 }]}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+              <Text style={styles.dateButtonText}>{formatYMDLong(startYMD)}</Text>
+              <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+            </Pressable>
           </Section>
 
           <Section title={t("medications.field.duration")}>
@@ -242,9 +251,43 @@ export default function CreateMedication() {
             loading={mutation.isPending}
           />
         </View>
+
+        <Modal
+          visible={showCalendar}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowCalendar(false)}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setShowCalendar(false)}
+          >
+            <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHead}>
+                <Text style={styles.modalTitle}>{t("medications.field.startDate")}</Text>
+                <Pressable onPress={() => setShowCalendar(false)} hitSlop={8}>
+                  <Ionicons name="close" size={22} color={colors.textMuted} />
+                </Pressable>
+              </View>
+              <MonthCalendar
+                value={startYMD}
+                onChange={(d) => {
+                  setStartYMD(d);
+                  setShowCalendar(false);
+                }}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
+}
+
+function formatYMDLong(ymd: string): string {
+  const [y, m, d] = ymd.split("-").map(Number);
+  if (!y || !m || !d) return ymd;
+  return formatDateLong(new Date(y, m - 1, d).toISOString());
 }
 
 function TargetChip({
@@ -491,4 +534,46 @@ const styles = StyleSheet.create({
   targetAvatarTextActive: { color: colors.primary },
   targetLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },
   targetLabelActive: { color: colors.bg },
+
+  dateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    minHeight: 52,
+  },
+  dateButtonText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: "600",
+    textTransform: "capitalize",
+  },
+
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    gap: spacing.md,
+  },
+  modalHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
 });
