@@ -130,42 +130,50 @@ export default function FamilyList() {
 
             {(accepted.length > 0 || outgoingPending.length > 0) && (
               <Section title={t("family.members")}>
-                {accepted.map((link) => (
-                  <Link key={link.id} href={`/(tabs)/family/${link.id}` as Href} asChild>
-                    <Pressable
-                      style={({ pressed }) => [styles.row, pressed && { opacity: 0.85 }]}
+                <View style={styles.grid}>
+                  {accepted.map((link) => (
+                    <Link
+                      key={link.id}
+                      href={`/(tabs)/family/${link.id}` as Href}
+                      asChild
                     >
-                      <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>{initials(link)}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.rowTitle}>{link.customName}</Text>
-                        <Text style={styles.rowSubtitle}>{partyDisplay(link.target)}</Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-                    </Pressable>
-                  </Link>
-                ))}
+                      <Pressable
+                        style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
+                      >
+                        <View style={styles.cardAvatar}>
+                          <Text style={styles.cardAvatarText}>{initials(link)}</Text>
+                        </View>
+                        <Text style={styles.cardName} numberOfLines={1}>
+                          {link.customName}
+                        </Text>
+                        <Text style={styles.cardSub} numberOfLines={1}>
+                          {partyDisplay(link.target)}
+                        </Text>
+                      </Pressable>
+                    </Link>
+                  ))}
 
-                {outgoingPending.map((link) => (
-                  <View key={link.id} style={[styles.row, styles.rowPending]}>
-                    <View style={[styles.avatar, styles.avatarPending]}>
-                      <Ionicons name="time-outline" size={18} color={colors.warning} />
+                  {outgoingPending.map((link) => (
+                    <View key={link.id} style={[styles.card, styles.cardPending]}>
+                      <Pressable
+                        onPress={() => confirmRemove(link)}
+                        hitSlop={6}
+                        style={styles.cardClose}
+                      >
+                        <Ionicons name="close" size={14} color={colors.textDim} />
+                      </Pressable>
+                      <View style={[styles.cardAvatar, styles.cardAvatarPending]}>
+                        <Ionicons name="time-outline" size={18} color={colors.warning} />
+                      </View>
+                      <Text style={styles.cardName} numberOfLines={1}>
+                        {link.customName}
+                      </Text>
+                      <Text style={styles.cardPendingNote}>
+                        {t("family.statusPending")}
+                      </Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.rowTitle}>{link.customName}</Text>
-                      <Text style={styles.rowSubtitle}>{partyDisplay(link.target)}</Text>
-                      <Text style={styles.pendingNote}>{t("family.statusPending")}</Text>
-                    </View>
-                    <Pressable
-                      onPress={() => confirmRemove(link)}
-                      hitSlop={8}
-                      style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
-                    >
-                      <Ionicons name="close" size={18} color={colors.textDim} />
-                    </Pressable>
-                  </View>
-                ))}
+                  ))}
+                </View>
               </Section>
             )}
 
@@ -295,6 +303,49 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   rowPending: { opacity: 0.8 },
+
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  card: {
+    flexBasis: "48%",
+    flexGrow: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.xs,
+    alignItems: "flex-start",
+  },
+  cardPending: { opacity: 0.85, position: "relative" },
+  cardClose: {
+    position: "absolute",
+    top: spacing.xs,
+    right: spacing.xs,
+    padding: 4,
+  },
+  cardAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+  },
+  cardAvatarPending: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.warning,
+  },
+  cardAvatarText: { color: colors.bg, fontWeight: "800", fontSize: fontSize.md },
+  cardName: { color: colors.text, fontSize: fontSize.md, fontWeight: "700" },
+  cardSub: { color: colors.textMuted, fontSize: fontSize.xs },
+  cardPendingNote: {
+    color: colors.warning,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
   avatar: {
     width: 40,
     height: 40,

@@ -3,9 +3,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { colors, spacing } from "@/lib/theme";
 import { Platform, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom > 0 ? insets.bottom : Platform.OS === "ios" ? 20 : 8;
   return (
     <Tabs
       screenOptions={{
@@ -16,14 +19,18 @@ export default function TabsLayout() {
           backgroundColor: colors.bg,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: Platform.OS === "ios" ? 88 : 64,
-          paddingTop: spacing.sm,
-          paddingBottom: Platform.OS === "ios" ? spacing.lg : spacing.sm,
+          height: 56 + bottomInset,
+          paddingTop: 6,
+          paddingBottom: bottomInset,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
+          lineHeight: 14,
+          marginTop: 2,
+          paddingBottom: 2,
         },
+        tabBarIconStyle: { marginTop: 2 },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
