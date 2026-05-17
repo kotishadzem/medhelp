@@ -71,6 +71,11 @@
     "failed": "Entsperren fehlgeschlagen",
     "usePassword": "Mit Passwort anmelden"
   },
+  "settings": {
+    "title": "Einstellungen",
+    "nameSection": "Name",
+    "editName": "Name bearbeiten"
+  },
   "quickUnlockSettings": {
     "title": "Schnellanmeldung",
     "subtitle": "Aktiviere jede Methode einzeln. Zum Umschalten ist eine Bestätigung mit derselben Methode nötig.",
@@ -220,6 +225,8 @@
     "editName": "Name bearbeiten",
     "family": "Familie",
     "familySubtitle": "Behalte die Medikamente deiner Familie im Blick",
+    "settings": "Einstellungen",
+    "settingsSubtitle": "Name, Schnellanmeldung, Sprache",
     "appSection": "App",
     "notifications": "Benachrichtigungen",
     "changePin": "PIN ändern",

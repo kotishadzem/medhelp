@@ -71,6 +71,11 @@
     "failed": "Couldn't unlock",
     "usePassword": "Use password instead"
   },
+  "settings": {
+    "title": "Settings",
+    "nameSection": "Name",
+    "editName": "Edit name"
+  },
   "quickUnlockSettings": {
     "title": "Quick sign-in",
     "subtitle": "Toggle each method independently. Flipping a switch requires verifying with that method.",
@@ -220,6 +225,8 @@
     "editName": "Edit name",
     "family": "Family",
     "familySubtitle": "Track your family's medications",
+    "settings": "Settings",
+    "settingsSubtitle": "Name, quick sign-in, language",
     "appSection": "App",
     "notifications": "Notifications",
     "changePin": "Change PIN",
