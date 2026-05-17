@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -304,53 +304,69 @@ function Input(props: React.ComponentProps<typeof TextInput>) {
 }
 
 function TimePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [h, m] = value.split(":");
+  const [draft, setDraft] = useState(value);
+
+  // Sync from outside when the parent resets the slot.
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
+
+  // Normalize "HHMM" / "HH:MM" / partial into "HH:MM", clamped to 23:59.
+  const normalize = (raw: string): string | null => {
+    const digits = raw.replace(/\D/g, "");
+    if (digits.length === 0) return null;
+    let hStr: string;
+    let mStr: string;
+    if (digits.length <= 2) {
+      hStr = digits;
+      mStr = "00";
+    } else {
+      hStr = digits.slice(0, digits.length - 2);
+      mStr = digits.slice(-2);
+    }
+    const h = Math.min(Number(hStr) || 0, 23);
+    const m = Math.min(Number(mStr) || 0, 59);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
+  // Live formatter: pretty as the user types, no truncation.
+  const formatDraft = (raw: string): string => {
+    let digits = raw.replace(/\D/g, "");
+    if (digits.length > 4) digits = digits.slice(-4);
+    if (digits.length === 0) return "";
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  };
+
   return (
     <View style={styles.timeCard}>
       <Ionicons name="time-outline" size={18} color={colors.textMuted} />
-      <View style={styles.timeFields}>
-        <NumberField
-          value={h}
-          onChange={(v) => onChange(`${v}:${m ?? "00"}`)}
-          max={23}
-          width={42}
-        />
-        <Text style={styles.timeColon}>:</Text>
-        <NumberField
-          value={m}
-          onChange={(v) => onChange(`${h ?? "00"}:${v}`)}
-          max={59}
-          width={42}
-        />
-      </View>
+      <TextInput
+        value={draft}
+        onChangeText={(text) => {
+          const formatted = formatDraft(text);
+          setDraft(formatted);
+          const norm = normalize(formatted);
+          if (norm) onChange(norm);
+        }}
+        onBlur={() => {
+          const norm = normalize(draft);
+          if (norm) {
+            setDraft(norm);
+            onChange(norm);
+          } else {
+            setDraft(value);
+          }
+        }}
+        keyboardType="number-pad"
+        inputMode="numeric"
+        placeholder="08:30"
+        placeholderTextColor={colors.textDim}
+        maxLength={5}
+        selectTextOnFocus
+        style={styles.timeText}
+      />
     </View>
-  );
-}
-
-function NumberField({
-  value,
-  onChange,
-  max,
-  width,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  max: number;
-  width: number;
-}) {
-  return (
-    <TextInput
-      value={value}
-      onChangeText={(t) => {
-        const digits = t.replace(/\D/g, "").slice(0, 2);
-        const n = Math.min(Number(digits || 0), max);
-        onChange(String(n).padStart(2, "0"));
-      }}
-      keyboardType="number-pad"
-      maxLength={2}
-      selectTextOnFocus
-      style={[styles.timeInput, { width }]}
-    />
   );
 }
 
@@ -418,14 +434,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     minHeight: 50,
   },
-  timeFields: { flexDirection: "row", alignItems: "center", gap: 2 },
-  timeColon: { color: colors.textMuted, fontSize: fontSize.lg, fontWeight: "700" },
-  timeInput: {
+  timeText: {
     color: colors.text,
     fontSize: fontSize.lg,
     fontWeight: "700",
-    textAlign: "center",
+    letterSpacing: 1,
     paddingVertical: 4,
+    minWidth: 64,
+    textAlign: "center",
   },
 
   footer: {
