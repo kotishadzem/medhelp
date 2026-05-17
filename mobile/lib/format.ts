@@ -1,3 +1,56 @@
+import i18n from "@/lib/i18n";
+
+const KA_MONTHS = [
+  "იანვარი",
+  "თებერვალი",
+  "მარტი",
+  "აპრილი",
+  "მაისი",
+  "ივნისი",
+  "ივლისი",
+  "აგვისტო",
+  "სექტემბერი",
+  "ოქტომბერი",
+  "ნოემბერი",
+  "დეკემბერი",
+];
+
+const KA_MONTHS_SHORT = [
+  "იან",
+  "თებ",
+  "მარ",
+  "აპრ",
+  "მაი",
+  "ივნ",
+  "ივლ",
+  "აგვ",
+  "სექ",
+  "ოქტ",
+  "ნოე",
+  "დეკ",
+];
+
+// JS Date.getDay(): 0 = Sunday, 1 = Monday, …
+const KA_WEEKDAYS = [
+  "კვირა",
+  "ორშაბათი",
+  "სამშაბათი",
+  "ოთხშაბათი",
+  "ხუთშაბათი",
+  "პარასკევი",
+  "შაბათი",
+];
+
+function currentLang(): string {
+  return i18n.language || "ka";
+}
+
+function localeFor(lang: string): string {
+  if (lang === "en") return "en-GB";
+  if (lang === "de") return "de-DE";
+  return "ka-GE";
+}
+
 export function formatTimeHHMM(iso: string): string {
   const d = new Date(iso);
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -5,7 +58,11 @@ export function formatTimeHHMM(iso: string): string {
 
 export function formatDateLong(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("ka-GE", {
+  const lang = currentLang();
+  if (lang === "ka") {
+    return `${KA_WEEKDAYS[d.getDay()]}, ${d.getDate()} ${KA_MONTHS[d.getMonth()]}`;
+  }
+  return d.toLocaleDateString(localeFor(lang), {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -14,9 +71,26 @@ export function formatDateLong(iso: string): string {
 
 export function formatDateShort(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("ka-GE", {
+  const lang = currentLang();
+  if (lang === "ka") {
+    return `${d.getDate()} ${KA_MONTHS_SHORT[d.getMonth()]}`;
+  }
+  return d.toLocaleDateString(localeFor(lang), {
     day: "numeric",
     month: "short",
+  });
+}
+
+export function formatWeekdayDayMonth(iso: string): string {
+  const d = new Date(iso);
+  const lang = currentLang();
+  if (lang === "ka") {
+    return `${KA_WEEKDAYS[d.getDay()]}, ${d.getDate()} ${KA_MONTHS[d.getMonth()]}`;
+  }
+  return d.toLocaleDateString(localeFor(lang), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
   });
 }
 
@@ -75,7 +149,6 @@ export function deriveIntakeStatus(
 }
 
 export function dateInputToISO(yyyymmdd: string): string {
-  // Treat as local date midnight, return ISO
   const [y, m, d] = yyyymmdd.split("-").map(Number);
   if (!y || !m || !d) return "";
   return new Date(y, m - 1, d).toISOString();

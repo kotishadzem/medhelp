@@ -19,6 +19,7 @@ import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import {
   deriveIntakeStatus,
   formatTimeHHMM,
+  formatWeekdayDayMonth,
   isToday,
   isTomorrow,
   timePeriod,
@@ -125,7 +126,7 @@ export default function TodayScreen() {
               ? t("today.greetingNamed", { name: user.firstName })
               : t("today.greeting")}
           </Text>
-          <Text style={styles.dateLine}>{formatTodayLabel(i18n.language)}</Text>
+          <Text style={styles.dateLine}>{formatTodayLabel()}</Text>
         </View>
 
         <View style={styles.statRow}>
@@ -253,26 +254,15 @@ function groupByPeriod(intakes: IntakeWithMedication[]) {
   return buckets;
 }
 
-function formatTodayLabel(lang: string): string {
-  return new Date().toLocaleDateString(localeFor(lang), {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+function formatTodayLabel(): string {
+  return formatWeekdayDayMonth(new Date().toISOString());
 }
 
 function dayLabel(ymd: string, t: (k: string) => string): string {
   const iso = `${ymd}T00:00:00`;
   if (isToday(iso)) return t("today.dayToday");
   if (isTomorrow(iso)) return t("today.dayTomorrow");
-  const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
-}
-
-function localeFor(lang: string): string {
-  if (lang === "ka") return "ka-GE";
-  if (lang === "de") return "de-DE";
-  return "en-GB";
+  return formatWeekdayDayMonth(iso);
 }
 
 // Background tint per derived status — TAKEN gets a soft green, MISSED a red
