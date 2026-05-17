@@ -8,8 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 export default function TabsLayout() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  // Web reports 0 inset — pick a comfortable manual fallback so labels never clip.
-  const bottomInset = insets.bottom > 0 ? insets.bottom : Platform.OS === "ios" ? 24 : 16;
+  const bottomInset = insets.bottom > 0 ? insets.bottom : Platform.OS === "ios" ? 24 : 18;
   return (
     <Tabs
       screenOptions={{
@@ -20,18 +19,16 @@ export default function TabsLayout() {
           backgroundColor: colors.bg,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 64 + bottomInset,
-          paddingTop: 10,
-          paddingBottom: bottomInset + 4,
+          height: 72 + bottomInset,
+          paddingTop: 8,
+          paddingBottom: bottomInset,
         },
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: "600",
-          lineHeight: 16,
-          marginTop: 4,
+          lineHeight: 14,
         },
-        tabBarItemStyle: { paddingVertical: 4 },
-        tabBarIconStyle: { marginTop: 0 },
+        tabBarLabelPosition: "below-icon",
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
