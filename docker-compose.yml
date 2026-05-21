@@ -24,7 +24,7 @@ services:
     container_name: medhelp-backend
     restart: unless-stopped
     ports:
-      - "3002:3002"
+      - "${BACKEND_HOST_PORT:-3002}:3002"
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://medhelp:medhelp_secret@postgres:5432/medhelp?schema=public}
       JWT_SECRET: ${JWT_SECRET}

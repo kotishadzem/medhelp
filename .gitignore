@@ -45,3 +45,6 @@ mobile/ios/
 
 # Testing
 coverage/
+
+# cicd-aws skill local config
+cicd_aws.config
