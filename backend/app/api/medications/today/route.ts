@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
             dosage: true,
             instructions: true,
             status: true,
+            type: true,
           },
         },
       },

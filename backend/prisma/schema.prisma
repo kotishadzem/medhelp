@@ -19,6 +19,11 @@ enum MedicationStatus {
   PAUSED
 }
 
+enum MedicationType {
+  TABLET
+  INJECTION
+}
+
 enum IntakeStatus {
   PENDING
   TAKEN
@@ -88,8 +93,9 @@ model Medication {
   name            String
   dosage          String
   instructions    String?
+  type            MedicationType   @default(TABLET)
   startDate       DateTime
-  endDate         DateTime
+  endDate         DateTime?
   frequencyPerDay Int
   timesOfDay      String[]
   status          MedicationStatus @default(ACTIVE)

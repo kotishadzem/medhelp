@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { colors, spacing } from "@/lib/theme";
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const { t } = useTranslation();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom > 0 ? insets.bottom : Platform.OS === "ios" ? 24 : 18;
   return (
@@ -44,11 +45,21 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="medications"
         options={{
-          title: t("tabs.medications"),
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name={focused ? "medkit" : "medkit-outline"} color={color} />
+          title: "",
+          tabBarIcon: () => (
+            <View style={{ marginTop: 14, alignItems: "center", justifyContent: "center" }}>
+              <Ionicons name="add-circle" size={48} color={colors.primary} />
+            </View>
           ),
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.primary,
         }}
+        listeners={() => ({
+          tabPress: (e) => {
+            e.preventDefault();
+            router.push("/(tabs)/medications/create");
+          },
+        })}
       />
       <Tabs.Screen
         name="profile"
@@ -62,6 +73,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="family" options={{ href: null }} />
       <Tabs.Screen name="quick-unlock" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="report" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -132,6 +132,7 @@
     "today": "Today",
     "upcoming": "Upcoming",
     "medications": "Medications",
+    "add": "Add",
     "profile": "Profile"
   },
   "today": {
@@ -145,6 +146,10 @@
     "dayTomorrow": "Tomorrow",
     "emptyTitle": "Nothing upcoming",
     "emptySubtitle": "Add a medication — we'll plan its dose times.",
+    "undoTitle": "Undo mark",
+    "undoBody": "Mark {{name}} as not taken?",
+    "undoConfirm": "Yes, undo",
+    "undoCancel": "Cancel",
     "period": {
       "morning": "Morning",
       "afternoon": "Afternoon",
@@ -177,11 +182,33 @@
       "instructions": "Instructions",
       "instructionsPlaceholder": "e.g. After meals",
       "optional": "Optional",
+      "type": "Form",
+      "typeOption": {
+        "TABLET": "Tablet",
+        "INJECTION": "Injection"
+      },
       "startDate": "Start date",
       "frequency": "How many times a day?",
       "times": "Times",
       "duration": "How long",
-      "days": "{{count}} days"
+      "days": "{{count}} days",
+      "durationMode": {
+        "preset": "Fixed period",
+        "custom": "Custom",
+        "forever": "Ongoing (forever)"
+      },
+      "durationOption": {
+        "preset3": "3 days",
+        "preset7": "7 days",
+        "preset14": "14 days",
+        "preset30": "30 days",
+        "custom": "Custom — enter manually",
+        "forever": "Forever — no end date"
+      },
+      "durationPick": "Pick a duration",
+      "customDays": "Number of days",
+      "customDaysPlaceholder": "e.g. 45",
+      "foreverHelper": "Ongoing — until you pause or complete it manually. We'll plan the next 90 days ahead."
     },
     "totalIntakes": "{{start}} – {{end}} ({{total}} total)",
     "save": "Add",
@@ -192,6 +219,7 @@
       "times": "Times",
       "startDate": "Start",
       "endDate": "End",
+      "ongoing": "Ongoing",
       "taken": "Taken",
       "remaining": "Remaining",
       "history": "History",
@@ -228,6 +256,10 @@
     "title": "Profile",
     "noName": "No name",
     "editName": "Edit name",
+    "medications": "Medications",
+    "medicationsSubtitle": "Browse all your medications",
+    "report": "Adherence report",
+    "reportSubtitle": "Intake history grouped by period",
     "family": "Family",
     "familySubtitle": "Track your family's medications",
     "settings": "Settings",
@@ -303,5 +335,14 @@
   },
   "common": {
     "delete": "Delete"
+  },
+  "report": {
+    "title": "Adherence report",
+    "period": {
+      "7": "7 days",
+      "30": "30 days",
+      "month": "This month"
+    },
+    "empty": "No data yet"
   }
 }

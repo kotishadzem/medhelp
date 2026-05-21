@@ -8,6 +8,7 @@ import type {
   Medication,
   MedicationIntake,
   MedicationStatus,
+  MedicationType,
   User,
 } from "@/lib/types";
 
@@ -47,8 +48,10 @@ export type CreateMedicationInput = {
   name: string;
   dosage: string;
   instructions?: string;
+  type: MedicationType;
   startDate: string;
-  endDate: string;
+  // Omit endDate for Forever medications (no end date).
+  endDate?: string;
   frequencyPerDay: number;
   timesOfDay: string[];
   forUserId?: string;
@@ -104,6 +107,20 @@ export const medicationsApi = {
       `/medications/${medicationId}/intakes/${intakeId}`,
       { method: "PATCH", body: { status } }
     ),
+
+  report: (from: string, to: string) =>
+    apiRequest<{
+      from: string;
+      to: string;
+      days: string[];
+      medications: {
+        id: string;
+        name: string;
+        type: MedicationType;
+        status: MedicationStatus;
+        days: Record<string, { taken: number; total: number }>;
+      }[];
+    }>(`/medications/report?from=${from}&to=${to}`),
 };
 
 export type CreateFamilyInput = { customName: string } & Identifier;

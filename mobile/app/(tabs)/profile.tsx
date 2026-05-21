@@ -62,6 +62,20 @@ export default function Profile() {
           </View>
 
           <Row
+            icon="medkit-outline"
+            label={t("profile.medications")}
+            sublabel={t("profile.medicationsSubtitle")}
+            onPress={() => router.push("/(tabs)/medications" as Href)}
+          />
+
+          <Row
+            icon="bar-chart-outline"
+            label={t("profile.report")}
+            sublabel={t("profile.reportSubtitle")}
+            onPress={() => router.push("/(tabs)/report" as Href)}
+          />
+
+          <Row
             icon="people-outline"
             label={t("profile.family")}
             sublabel={t("profile.familySubtitle")}

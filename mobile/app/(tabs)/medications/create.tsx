@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -21,10 +21,13 @@ import { Button } from "@/components/Button";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { addDaysYMD, dateInputToISO, formatDateLong, todayYMD } from "@/lib/format";
 import { scheduleForMedication } from "@/lib/notifications";
-import type { FamilyLink, FamilyParty } from "@/lib/types";
+import type { FamilyLink, FamilyParty, MedicationType } from "@/lib/types";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 const DEFAULT_TIMES = ["08:00", "14:00", "20:00", "22:00"];
+const PRESET_DURATIONS = [3, 7, 14, 30] as const;
+
+type DurationMode = "preset" | "custom" | "forever";
 
 export default function CreateMedication() {
   const router = useRouter();
@@ -40,9 +43,13 @@ export default function CreateMedication() {
   const [name, setName] = useState("");
   const [dosage, setDosage] = useState("");
   const [instructions, setInstructions] = useState("");
+  const [type, setType] = useState<MedicationType>("TABLET");
   const [startYMD, setStartYMD] = useState<string>(todayYMD());
   const [showCalendar, setShowCalendar] = useState(false);
+  const [durationMode, setDurationMode] = useState<DurationMode>("preset");
   const [durationDays, setDurationDays] = useState(7);
+  const [customDaysDraft, setCustomDaysDraft] = useState("");
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
   const [frequency, setFrequency] = useState(1);
   const [times, setTimes] = useState<string[]>(["09:00"]);
 
@@ -52,7 +59,14 @@ export default function CreateMedication() {
     setTimes(DEFAULT_TIMES.slice(0, f));
   };
 
-  const endYMD = useMemo(() => addDaysYMD(startYMD, Math.max(1, durationDays) - 1), [startYMD, durationDays]);
+  const effectiveDays = durationMode === "custom"
+    ? Math.max(1, Math.min(365, Number(customDaysDraft) || 0))
+    : durationDays;
+
+  const endYMD = useMemo(
+    () => addDaysYMD(startYMD, Math.max(1, effectiveDays) - 1),
+    [startYMD, effectiveDays]
+  );
 
   const mutation = useMutation({
     mutationFn: async (input: Parameters<typeof medicationsApi.create>[0]) => {
@@ -82,12 +96,16 @@ export default function CreateMedication() {
     },
   });
 
+  const durationValid =
+    durationMode === "forever" ||
+    (durationMode === "custom" ? Number(customDaysDraft) >= 1 : durationDays >= 1);
+
   const canSubmit =
     name.trim().length > 0 &&
     dosage.trim().length > 0 &&
     times.length === frequency &&
     times.every((t) => /^([01]\d|2[0-3]):[0-5]\d$/.test(t)) &&
-    durationDays >= 1;
+    durationValid;
 
   const submit = () => {
     if (!canSubmit) return;
@@ -95,13 +113,25 @@ export default function CreateMedication() {
       name: name.trim(),
       dosage: dosage.trim(),
       instructions: instructions.trim() ? instructions.trim() : undefined,
+      type,
       startDate: dateInputToISO(startYMD),
-      endDate: dateInputToISO(endYMD),
+      endDate: durationMode === "forever" ? undefined : dateInputToISO(endYMD),
       frequencyPerDay: frequency,
       timesOfDay: times,
       forUserId: forUserId ?? undefined,
     });
   };
+
+  const durationLabel = (() => {
+    if (durationMode === "forever") return t("medications.field.durationOption.forever");
+    if (durationMode === "custom") {
+      const n = Number(customDaysDraft);
+      return n > 0
+        ? t("medications.field.days", { count: n })
+        : t("medications.field.durationOption.custom");
+    }
+    return t("medications.field.days", { count: durationDays });
+  })();
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
@@ -163,6 +193,33 @@ export default function CreateMedication() {
             />
           </Section>
 
+          <Section title={t("medications.field.type")}>
+            <View style={styles.segment}>
+              {(["TABLET", "INJECTION"] as const).map((opt) => {
+                const active = type === opt;
+                const icon = opt === "TABLET" ? "pill" : "needle";
+                return (
+                  <Pressable
+                    key={opt}
+                    onPress={() => setType(opt)}
+                    style={[styles.typeItem, active && styles.segmentItemActive]}
+                  >
+                    <MaterialCommunityIcons
+                      name={icon}
+                      size={20}
+                      color={active ? colors.bg : colors.textMuted}
+                    />
+                    <Text
+                      style={[styles.segmentText, active && styles.segmentTextActive]}
+                    >
+                      {t(`medications.field.typeOption.${opt}`)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Section>
+
           <Section title={t("medications.field.instructions")} optional>
             <Input
               value={instructions}
@@ -184,28 +241,38 @@ export default function CreateMedication() {
           </Section>
 
           <Section title={t("medications.field.duration")}>
-            <View style={styles.segment}>
-              {[3, 7, 14, 30].map((d) => (
-                <Pressable
-                  key={d}
-                  onPress={() => setDurationDays(d)}
-                  style={[styles.segmentItem, durationDays === d && styles.segmentItemActive]}
-                >
-                  <Text
-                    style={[styles.segmentText, durationDays === d && styles.segmentTextActive]}
-                  >
-                    {t("medications.field.days", { count: d })}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-            <Text style={styles.helper}>
-              {t("medications.totalIntakes", {
-                start: startYMD,
-                end: endYMD,
-                total: durationDays * frequency,
-              })}
-            </Text>
+            <Pressable
+              onPress={() => setShowDurationPicker(true)}
+              style={({ pressed }) => [styles.dateButton, pressed && { opacity: 0.85 }]}
+            >
+              <Ionicons name="hourglass-outline" size={18} color={colors.primary} />
+              <Text style={styles.dateButtonText}>{durationLabel}</Text>
+              <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+            </Pressable>
+
+            {durationMode === "custom" && (
+              <View style={styles.customDaysRow}>
+                <Input
+                  value={customDaysDraft}
+                  onChangeText={(v) => setCustomDaysDraft(v.replace(/\D/g, "").slice(0, 3))}
+                  placeholder={t("medications.field.customDaysPlaceholder")}
+                  keyboardType="number-pad"
+                  inputMode="numeric"
+                />
+              </View>
+            )}
+
+            {durationMode === "forever" ? (
+              <Text style={styles.helper}>{t("medications.field.foreverHelper")}</Text>
+            ) : (
+              <Text style={styles.helper}>
+                {t("medications.totalIntakes", {
+                  start: startYMD,
+                  end: endYMD,
+                  total: effectiveDays * frequency,
+                })}
+              </Text>
+            )}
           </Section>
 
           <Section title={t("medications.field.frequency")}>
@@ -279,8 +346,100 @@ export default function CreateMedication() {
             </Pressable>
           </Pressable>
         </Modal>
+
+        <Modal
+          visible={showDurationPicker}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowDurationPicker(false)}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setShowDurationPicker(false)}
+          >
+            <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+              <View style={styles.modalHead}>
+                <Text style={styles.modalTitle}>{t("medications.field.durationPick")}</Text>
+                <Pressable onPress={() => setShowDurationPicker(false)} hitSlop={8}>
+                  <Ionicons name="close" size={22} color={colors.textMuted} />
+                </Pressable>
+              </View>
+
+              {PRESET_DURATIONS.map((d) => {
+                const active = durationMode === "preset" && durationDays === d;
+                return (
+                  <DurationOption
+                    key={d}
+                    label={t(`medications.field.durationOption.preset${d}` as const)}
+                    active={active}
+                    onPress={() => {
+                      setDurationMode("preset");
+                      setDurationDays(d);
+                      setShowDurationPicker(false);
+                    }}
+                  />
+                );
+              })}
+              <DurationOption
+                label={t("medications.field.durationOption.custom")}
+                active={durationMode === "custom"}
+                onPress={() => {
+                  setDurationMode("custom");
+                  if (!customDaysDraft) setCustomDaysDraft(String(durationDays));
+                  setShowDurationPicker(false);
+                }}
+              />
+              <DurationOption
+                label={t("medications.field.durationOption.forever")}
+                active={durationMode === "forever"}
+                icon="infinite-outline"
+                onPress={() => {
+                  setDurationMode("forever");
+                  setShowDurationPicker(false);
+                }}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+function DurationOption({
+  label,
+  active,
+  onPress,
+  icon,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  icon?: React.ComponentProps<typeof Ionicons>["name"];
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.durationOption,
+        active && styles.durationOptionActive,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      {icon && (
+        <Ionicons
+          name={icon}
+          size={18}
+          color={active ? colors.primary : colors.textMuted}
+        />
+      )}
+      <Text
+        style={[styles.durationOptionText, active && styles.durationOptionTextActive]}
+      >
+        {label}
+      </Text>
+      {active && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+    </Pressable>
   );
 }
 
@@ -474,6 +633,18 @@ const styles = StyleSheet.create({
   segmentItemActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   segmentText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: "700" },
   segmentTextActive: { color: colors.bg },
+  typeItem: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
 
   timesGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   timeCard: {
@@ -576,4 +747,29 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   modalTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700" },
+
+  customDaysRow: { marginTop: spacing.sm },
+  durationOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    marginTop: spacing.sm,
+  },
+  durationOptionActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceElevated,
+  },
+  durationOptionText: {
+    flex: 1,
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: "600",
+  },
+  durationOptionTextActive: { color: colors.primary },
 });

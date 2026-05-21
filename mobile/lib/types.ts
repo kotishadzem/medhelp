@@ -1,5 +1,6 @@
 export type UserRole = "PATIENT" | "ADMIN";
 export type MedicationStatus = "ACTIVE" | "COMPLETED" | "CANCELLED" | "PAUSED";
+export type MedicationType = "TABLET" | "INJECTION";
 export type IntakeStatus = "PENDING" | "TAKEN" | "MISSED" | "SKIPPED";
 
 export type User = {
@@ -19,8 +20,9 @@ export type Medication = {
   name: string;
   dosage: string;
   instructions: string | null;
+  type: MedicationType;
   startDate: string;
-  endDate: string;
+  endDate: string | null;
   frequencyPerDay: number;
   timesOfDay: string[];
   status: MedicationStatus;
@@ -39,7 +41,7 @@ export type MedicationIntake = {
 };
 
 export type IntakeWithMedication = MedicationIntake & {
-  medication: Pick<Medication, "id" | "name" | "dosage" | "instructions" | "status">;
+  medication: Pick<Medication, "id" | "name" | "dosage" | "instructions" | "status" | "type">;
 };
 
 export type ApiSuccess<T> = { success: true; data: T };

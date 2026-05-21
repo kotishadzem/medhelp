@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       name,
       dosage,
       instructions,
+      type,
       startDate,
       endDate,
       frequencyPerDay,
@@ -57,9 +58,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (endDate <= startDate) {
+    if (endDate && endDate <= startDate) {
       return validationError("endDate must be after startDate");
     }
+
+    // Forever medications (no endDate): pre-generate intakes for a rolling
+    // 90-day horizon. A future cron should extend this before it elapses.
+    const FOREVER_HORIZON_DAYS = 90;
+    const intakeEnd = endDate ?? (() => {
+      const horizon = new Date(startDate);
+      horizon.setDate(horizon.getDate() + FOREVER_HORIZON_DAYS - 1);
+      return horizon;
+    })();
 
     // Resolve owner: self by default; otherwise an accepted family link's target.
     let ownerId = user.userId;
@@ -84,8 +94,9 @@ export async function POST(request: NextRequest) {
         name,
         dosage,
         instructions,
+        type,
         startDate,
-        endDate,
+        endDate: endDate ?? null,
         frequencyPerDay,
         timesOfDay,
       },
@@ -94,7 +105,7 @@ export async function POST(request: NextRequest) {
     // Generate intake records for each day × each time
     const intakes: { medicationId: string; scheduledAt: Date }[] = [];
     const current = new Date(startDate);
-    const end = new Date(endDate);
+    const end = new Date(intakeEnd);
 
     while (current <= end) {
       for (const time of timesOfDay) {

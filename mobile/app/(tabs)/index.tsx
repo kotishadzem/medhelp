@@ -9,13 +9,14 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { medicationsApi } from "@/lib/api/endpoints";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { medNameFontSize, useMedFontScale } from "@/lib/settings/SettingsContext";
 import { cancelForIntakes } from "@/lib/notifications";
+import { confirm } from "@/lib/confirm";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import {
   deriveIntakeStatus,
@@ -82,8 +83,8 @@ export default function TodayScreen() {
     };
   }, [todayQuery.data]);
 
-  const markTaken = useCallback(
-    async (intake: IntakeWithMedication) => {
+  const setIntakeStatus = useCallback(
+    async (intake: IntakeWithMedication, status: "TAKEN" | "PENDING") => {
       qc.setQueryData<{ date: string; days: number; intakes: IntakeWithMedication[] }>(
         ["today", 2],
         (prev) =>
@@ -92,21 +93,41 @@ export default function TodayScreen() {
                 ...prev,
                 intakes: prev.intakes.map((i) =>
                   i.id === intake.id
-                    ? { ...i, status: "TAKEN", takenAt: new Date().toISOString() }
+                    ? {
+                        ...i,
+                        status,
+                        takenAt: status === "TAKEN" ? new Date().toISOString() : null,
+                      }
                     : i
                 ),
               }
             : prev
       );
       try {
-        await medicationsApi.updateIntake(intake.medicationId, intake.id, "TAKEN");
-        await cancelForIntakes([intake.id]);
-        qc.invalidateQueries({ queryKey: ["today"] });
-      } catch {
+        await medicationsApi.updateIntake(intake.medicationId, intake.id, status);
+        if (status === "TAKEN") await cancelForIntakes([intake.id]);
+      } finally {
         qc.invalidateQueries({ queryKey: ["today"] });
       }
     },
     [qc]
+  );
+
+  const onIntakePress = useCallback(
+    async (intake: IntakeWithMedication) => {
+      if (intake.status === "TAKEN") {
+        const ok = await confirm({
+          title: t("today.undoTitle"),
+          body: t("today.undoBody", { name: intake.medication.name }),
+          confirmLabel: t("today.undoConfirm"),
+          cancelLabel: t("today.undoCancel"),
+        });
+        if (ok) await setIntakeStatus(intake, "PENDING");
+      } else {
+        await setIntakeStatus(intake, "TAKEN");
+      }
+    },
+    [setIntakeStatus, t]
   );
 
   return (
@@ -162,7 +183,7 @@ export default function TodayScreen() {
                       <Text style={styles.sectionLabel}>{t(`today.period.${period}`)}</Text>
                     </View>
                     {items.map((intake) => (
-                      <IntakeRow key={intake.id} intake={intake} onMark={markTaken} />
+                      <IntakeRow key={intake.id} intake={intake} onMark={onIntakePress} />
                     ))}
                   </View>
                 );
@@ -222,18 +243,18 @@ function IntakeRow({
         </Text>
       </View>
       <Pressable
-        onPress={() => (isTaken ? undefined : onMark(intake))}
+        onPress={() => onMark(intake)}
         style={({ pressed }) => [
           styles.checkBtn,
           isTaken && styles.checkBtnTaken,
           pressed && { opacity: 0.7 },
         ]}
       >
-        {isTaken ? (
-          <Ionicons name="checkmark" size={22} color={colors.bg} />
-        ) : (
-          <Ionicons name="ellipse-outline" size={22} color={colors.textMuted} />
-        )}
+        <MaterialCommunityIcons
+          name={intake.medication.type === "INJECTION" ? "needle" : "pill"}
+          size={22}
+          color={isTaken ? colors.bg : colors.textMuted}
+        />
       </Pressable>
     </View>
   );

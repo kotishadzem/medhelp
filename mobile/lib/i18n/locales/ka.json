@@ -132,6 +132,7 @@
     "today": "დღეს",
     "upcoming": "მიმდინარე",
     "medications": "მედიკამენტები",
+    "add": "დამატება",
     "profile": "პროფილი"
   },
   "today": {
@@ -145,6 +146,10 @@
     "dayTomorrow": "ხვალ",
     "emptyTitle": "მისაღები არ გაქვს",
     "emptySubtitle": "დაამატე მედიკამენტი — დაგეგმავ მისი მიღების დროებს.",
+    "undoTitle": "მონიშვნის გაუქმება",
+    "undoBody": "გნებავს {{name}}-ის სტატუსი დააბრუნო მიუღებელში?",
+    "undoConfirm": "დიახ, დააბრუნე",
+    "undoCancel": "გაუქმება",
     "period": {
       "morning": "დილა",
       "afternoon": "შუადღე",
@@ -177,11 +182,33 @@
       "instructions": "ინსტრუქცია",
       "instructionsPlaceholder": "მაგ. ჭამის შემდეგ",
       "optional": "არასავალდებულო",
+      "type": "ფორმა",
+      "typeOption": {
+        "TABLET": "ტაბლეტი",
+        "INJECTION": "ნემსი"
+      },
       "startDate": "დაწყების თარიღი",
       "frequency": "დღეში რამდენჯერ?",
       "times": "დროები",
       "duration": "რამდენი ხანი",
-      "days": "{{count}} დღე"
+      "days": "{{count}} დღე",
+      "durationMode": {
+        "preset": "ფიქსირებული პერიოდი",
+        "custom": "ქასთამი",
+        "forever": "სულ (ფორევერ)"
+      },
+      "durationOption": {
+        "preset3": "3 დღე",
+        "preset7": "7 დღე",
+        "preset14": "14 დღე",
+        "preset30": "30 დღე",
+        "custom": "ქასთამი — ხელით შეიყვანე",
+        "forever": "სულ — დასრულების თარიღის გარეშე"
+      },
+      "durationPick": "აირჩიე ხანგრძლივობა",
+      "customDays": "დღეების რაოდენობა",
+      "customDaysPlaceholder": "მაგ. 45",
+      "foreverHelper": "მუდმივი მიღება — სანამ თვითონ არ შეაჩერებ ან არ დაასრულებ. ვგეგმავთ შემდეგ 90 დღეს."
     },
     "totalIntakes": "{{start}} – {{end}} ({{total}} ჯამში)",
     "save": "დამატება",
@@ -192,6 +219,7 @@
       "times": "დროები",
       "startDate": "დაწყება",
       "endDate": "დასრულება",
+      "ongoing": "მუდმივი",
       "taken": "მიღებული",
       "remaining": "დარჩა",
       "history": "ისტორია",
@@ -228,6 +256,10 @@
     "title": "პროფილი",
     "noName": "უსახელო",
     "editName": "სახელის შეცვლა",
+    "medications": "მედიკამენტები",
+    "medicationsSubtitle": "ნახე ყველა შენი მედიკამენტი",
+    "report": "მიღების რეპორტი",
+    "reportSubtitle": "მედიკამენტების მიღების ისტორია პერიოდის მიხედვით",
     "family": "ოჯახი",
     "familySubtitle": "ნახე ოჯახის წევრების წამლები",
     "settings": "პარამეტრები",
@@ -303,5 +335,14 @@
   },
   "common": {
     "delete": "წაშლა"
+  },
+  "report": {
+    "title": "მიღების რეპორტი",
+    "period": {
+      "7": "7 დღე",
+      "30": "30 დღე",
+      "month": "ეს თვე"
+    },
+    "empty": "მონაცემები ჯერ არ არის"
   }
 }

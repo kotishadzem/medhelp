@@ -139,7 +139,10 @@ export default function MedicationDetail() {
           </View>
           <View style={styles.statsRow}>
             <Stat label={t("medications.detail.startDate")} value={formatDateShort(m.startDate)} />
-            <Stat label={t("medications.detail.endDate")} value={formatDateShort(m.endDate)} />
+            <Stat
+              label={t("medications.detail.endDate")}
+              value={m.endDate ? formatDateShort(m.endDate) : t("medications.detail.ongoing")}
+            />
           </View>
         </View>
 

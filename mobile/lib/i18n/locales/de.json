@@ -132,6 +132,7 @@
     "today": "Heute",
     "upcoming": "Anstehend",
     "medications": "Medikamente",
+    "add": "Hinzufügen",
     "profile": "Profil"
   },
   "today": {
@@ -145,6 +146,10 @@
     "dayTomorrow": "Morgen",
     "emptyTitle": "Nichts geplant",
     "emptySubtitle": "Füge ein Medikament hinzu — wir planen die Einnahmezeiten.",
+    "undoTitle": "Markierung zurücknehmen",
+    "undoBody": "{{name}} als nicht eingenommen markieren?",
+    "undoConfirm": "Ja, zurücknehmen",
+    "undoCancel": "Abbrechen",
     "period": {
       "morning": "Morgen",
       "afternoon": "Mittag",
@@ -177,11 +182,33 @@
       "instructions": "Hinweise",
       "instructionsPlaceholder": "z. B. Nach dem Essen",
       "optional": "Optional",
+      "type": "Form",
+      "typeOption": {
+        "TABLET": "Tablette",
+        "INJECTION": "Spritze"
+      },
       "startDate": "Startdatum",
       "frequency": "Wie oft am Tag?",
       "times": "Zeiten",
       "duration": "Wie lange",
-      "days": "{{count}} Tage"
+      "days": "{{count}} Tage",
+      "durationMode": {
+        "preset": "Fester Zeitraum",
+        "custom": "Eigene Dauer",
+        "forever": "Dauerhaft"
+      },
+      "durationOption": {
+        "preset3": "3 Tage",
+        "preset7": "7 Tage",
+        "preset14": "14 Tage",
+        "preset30": "30 Tage",
+        "custom": "Eigene Dauer — manuell eingeben",
+        "forever": "Dauerhaft — kein Enddatum"
+      },
+      "durationPick": "Dauer wählen",
+      "customDays": "Anzahl Tage",
+      "customDaysPlaceholder": "z. B. 45",
+      "foreverHelper": "Dauerhaft — bis du pausierst oder abschließt. Wir planen die nächsten 90 Tage."
     },
     "totalIntakes": "{{start}} – {{end}} ({{total}} gesamt)",
     "save": "Hinzufügen",
@@ -192,6 +219,7 @@
       "times": "Zeiten",
       "startDate": "Beginn",
       "endDate": "Ende",
+      "ongoing": "Dauerhaft",
       "taken": "Eingenommen",
       "remaining": "Verbleibend",
       "history": "Verlauf",
@@ -228,6 +256,10 @@
     "title": "Profil",
     "noName": "Kein Name",
     "editName": "Name bearbeiten",
+    "medications": "Medikamente",
+    "medicationsSubtitle": "Alle deine Medikamente anzeigen",
+    "report": "Einnahmebericht",
+    "reportSubtitle": "Einnahmeverlauf nach Zeitraum",
     "family": "Familie",
     "familySubtitle": "Behalte die Medikamente deiner Familie im Blick",
     "settings": "Einstellungen",
@@ -303,5 +335,14 @@
   },
   "common": {
     "delete": "Löschen"
+  },
+  "report": {
+    "title": "Einnahmebericht",
+    "period": {
+      "7": "7 Tage",
+      "30": "30 Tage",
+      "month": "Dieser Monat"
+    },
+    "empty": "Noch keine Daten"
   }
 }

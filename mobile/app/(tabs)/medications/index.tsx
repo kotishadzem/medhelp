@@ -126,7 +126,9 @@ function MedRow({ medication }: { medication: Medication }) {
             <Ionicons name="calendar-outline" size={14} color={colors.textDim} />
             <Text style={styles.metaText}>
               {formatDateShort(medication.startDate)} —{" "}
-              {formatDateShort(medication.endDate)}
+              {medication.endDate
+                ? formatDateShort(medication.endDate)
+                : t("medications.detail.ongoing")}
             </Text>
           </View>
           {medication._count && (

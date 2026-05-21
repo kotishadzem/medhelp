@@ -6,8 +6,9 @@ export const createMedicationSchema = z.object({
   name: z.string().min(1, "Medication name is required").max(200),
   dosage: z.string().min(1, "Dosage is required").max(100),
   instructions: z.string().max(500).optional(),
+  type: z.enum(["TABLET", "INJECTION"]).default("TABLET"),
   startDate: z.coerce.date(),
-  endDate: z.coerce.date(),
+  endDate: z.coerce.date().optional(),
   frequencyPerDay: z.number().int().min(1).max(10),
   timesOfDay: z
     .array(z.string().regex(timeRegex, "Time must be in HH:MM format"))
@@ -23,5 +24,5 @@ export const updateMedicationSchema = z.object({
 });
 
 export const updateIntakeSchema = z.object({
-  status: z.enum(["TAKEN", "MISSED", "SKIPPED"]),
+  status: z.enum(["PENDING", "TAKEN", "MISSED", "SKIPPED"]),
 });
