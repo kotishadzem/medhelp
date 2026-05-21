@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+Dockerfile
+.dockerignore
+README.md
+AGENTS.md
+CLAUDE.md
+*.log
+coverage
+tsconfig.tsbuildinfo
+app/generated
