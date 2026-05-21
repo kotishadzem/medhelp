@@ -83,7 +83,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
             "cd ~/apps/${{ vars.COMPOSE_PROJECT_NAME }} && docker compose ps --format json" \
-            | jq -e 'all(.State == "running")'
+            | jq -sce 'all(.[]; .State == "running")'
 
       - name: Prune old images on EC2
         run: |
