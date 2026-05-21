@@ -1,0 +1,11 @@
+node_modules
+.expo
+dist
+.git
+.gitignore
+ios
+android
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
