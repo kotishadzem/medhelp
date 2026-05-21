@@ -34,5 +34,18 @@ services:
       postgres:
         condition: service_healthy
 
+  migrator:
+    image: mamukakotishadze/medhelp-migrator
+    build:
+      context: ./backend
+      target: builder
+    profiles: [migrate]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://medhelp:medhelp_secret@postgres:5432/medhelp?schema=public}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["npx", "prisma", "migrate", "deploy"]
+
 volumes:
   pgdata:

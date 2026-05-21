@@ -19,7 +19,7 @@ jobs:
         env:
           BACKEND_HOST_PORT: ${{ vars.BACKEND_HOST_PORT }}
           COMPOSE_PROJECT_NAME: ${{ vars.COMPOSE_PROJECT_NAME }}
-        run: docker compose -f docker-compose.yml build
+        run: docker compose -f docker-compose.yml --profile migrate build
 
       - name: Log in to Docker Hub
         if: github.ref_name == vars.DEPLOY_BRANCH
@@ -34,6 +34,9 @@ jobs:
           docker tag mamukakotishadze/medhelp-backend mamukakotishadze/medhelp-backend:${SHORT_SHA}
           docker push mamukakotishadze/medhelp-backend
           docker push mamukakotishadze/medhelp-backend:${SHORT_SHA}
+          docker tag mamukakotishadze/medhelp-migrator mamukakotishadze/medhelp-migrator:${SHORT_SHA}
+          docker push mamukakotishadze/medhelp-migrator
+          docker push mamukakotishadze/medhelp-migrator:${SHORT_SHA}
 
   deploy:
     needs: build
@@ -73,6 +76,11 @@ jobs:
           JWT_SECRET=$JWT_SECRET
           JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET
           EOF
+
+      - name: Apply Prisma migrations
+        run: |
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "cd ~/apps/${{ vars.COMPOSE_PROJECT_NAME }} && docker compose --profile migrate pull migrator && docker compose --profile migrate run --rm migrator"
 
       - name: Deploy
         run: |
