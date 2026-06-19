@@ -13,15 +13,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { documentsApi, familyApi } from "@/lib/api/endpoints";
+import { familyApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
-import { DocumentTypeIcon } from "@/components/DocumentTypeIcon";
+import { DocumentsListView } from "@/components/DocumentsListView";
 import { IntakeBadge, MedicationBadge } from "@/components/StatusBadge";
-import { formatDateLong, formatTimeHHMM, timePeriod } from "@/lib/format";
+import { formatTimeHHMM, timePeriod } from "@/lib/format";
 import type {
   FamilyParty,
   IntakeWithMedication,
-  MedicalDocument,
   Medication,
 } from "@/lib/types";
 import { medNameFontSize, useMedFontScale } from "@/lib/settings/SettingsContext";
@@ -41,11 +40,6 @@ export default function FamilyOverview() {
     enabled: !!id,
   });
   const targetUserId = query.data?.target.id;
-  const documentsQuery = useQuery({
-    queryKey: ["documents", { forUserId: targetUserId }],
-    queryFn: () => documentsApi.list({ forUserId: targetUserId! }),
-    enabled: !!targetUserId && tab === "documents",
-  });
 
   if (query.isLoading) {
     return (
@@ -129,37 +123,18 @@ export default function FamilyOverview() {
       </View>
 
       {tab === "documents" ? (
-        <ScrollView
-          contentContainerStyle={styles.body}
-          refreshControl={
-            <RefreshControl
-              refreshing={documentsQuery.isRefetching}
-              onRefresh={() => documentsQuery.refetch()}
-              tintColor={colors.primary}
-            />
-          }
-        >
-          {documentsQuery.isLoading ? (
-            <View style={styles.center}>
-              <ActivityIndicator color={colors.primary} />
-            </View>
-          ) : (documentsQuery.data?.documents.length ?? 0) === 0 ? (
-            <View style={styles.center}>
-              <Ionicons name="folder-open-outline" size={48} color={colors.textDim} />
-              <Text style={styles.muted}>{t("documents.emptyTitle")}</Text>
-            </View>
-          ) : (
-            (documentsQuery.data?.documents ?? []).map((doc) => (
-              <FamilyDocumentRow
-                key={doc.id}
-                doc={doc}
-                onPress={() =>
-                  router.push({ pathname: "/(tabs)/documents/[id]", params: { id: doc.id } })
-                }
-              />
-            ))
-          )}
-        </ScrollView>
+        targetUserId ? (
+          <DocumentsListView
+            forUserId={targetUserId}
+            onPressRow={(doc) =>
+              router.push({ pathname: "/(tabs)/documents/[id]", params: { id: doc.id } })
+            }
+          />
+        ) : (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        )
       ) : (
       <ScrollView
         contentContainerStyle={styles.body}
@@ -249,39 +224,6 @@ export default function FamilyOverview() {
       </ScrollView>
       )}
     </SafeAreaView>
-  );
-}
-
-function FamilyDocumentRow({
-  doc,
-  onPress,
-}: {
-  doc: MedicalDocument;
-  onPress: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.docRow, pressed && { opacity: 0.85 }]}
-    >
-      <DocumentTypeIcon type={doc.documentType} size={44} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.docRowTitle} numberOfLines={1}>
-          {doc.customType?.trim() || t(`documents.type.${doc.documentType}`)}
-        </Text>
-        <Text style={styles.docRowMeta} numberOfLines={1}>
-          {formatDateLong(doc.studyDate)} · {doc.clinic}
-        </Text>
-      </View>
-      {doc.files.length > 1 && (
-        <View style={styles.docRowBadge}>
-          <Ionicons name="documents-outline" size={12} color={colors.primary} />
-          <Text style={styles.docRowBadgeText}>{doc.files.length}</Text>
-        </View>
-      )}
-      <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
-    </Pressable>
   );
 }
 

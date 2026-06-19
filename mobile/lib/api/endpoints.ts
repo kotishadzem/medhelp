@@ -198,7 +198,10 @@ export const documentsApi = {
   remove: (id: string) =>
     apiRequest<{ message: string }>(`/documents/${id}`, { method: "DELETE" }),
 
-  clinics: () => apiRequest<{ clinics: string[] }>("/documents/clinics"),
+  clinics: (forUserId?: string) =>
+    apiRequest<{ clinics: string[] }>(
+      `/documents/clinics${forUserId ? `?forUserId=${encodeURIComponent(forUserId)}` : ""}`
+    ),
 
   createShare: (id: string) =>
     apiRequest<{
