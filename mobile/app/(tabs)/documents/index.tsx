@@ -118,6 +118,7 @@ export default function DocumentsListScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.chipsScroll}
         contentContainerStyle={styles.chipsRow}
       >
         <Chip
@@ -418,7 +419,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
     gap: spacing.md,
   },
   title: { color: colors.text, fontSize: fontSize.xxl, fontWeight: "800", letterSpacing: -0.5 },
@@ -444,6 +445,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     marginHorizontal: spacing.xl,
+    marginBottom: spacing.xs,
     gap: spacing.sm,
     height: 44,
   },
@@ -454,9 +456,10 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
 
+  chipsScroll: { flexGrow: 0 },
   chipsRow: {
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     gap: spacing.xs + 2,
     alignItems: "center",
   },
@@ -484,7 +487,8 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: spacing.xs + 2,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
     alignItems: "center",
   },
   clearChip: {
