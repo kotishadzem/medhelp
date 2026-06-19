@@ -132,8 +132,71 @@
     "today": "Today",
     "upcoming": "Upcoming",
     "medications": "Medications",
+    "documents": "Documents",
     "add": "Add",
     "profile": "Profile"
+  },
+  "documents": {
+    "title": "My documents",
+    "subtitle": "Medical reports, Form 100, lab results",
+    "emptyTitle": "No documents yet",
+    "emptySubtitle": "Upload a PDF or photo and tag it with date, clinic, and study type.",
+    "uploadCta": "Upload a document",
+    "uploadCtaShort": "Upload",
+    "searchPlaceholder": "Search (clinic, study, file)",
+    "filters": {
+      "all": "All",
+      "type": "Type",
+      "clinic": "Clinic",
+      "date": "Date",
+      "from": "From",
+      "to": "To",
+      "clear": "Clear"
+    },
+    "fields": {
+      "file": "File",
+      "documentType": "Study type",
+      "customType": "Exact name (optional)",
+      "clinic": "Clinic",
+      "studyDate": "Study date",
+      "uploadedAt": "Uploaded",
+      "notes": "Notes",
+      "fileName": "Filename",
+      "fileSize": "Size"
+    },
+    "actions": {
+      "pickFile": "Pick a file",
+      "pickPdf": "Pick PDF",
+      "pickPhoto": "Pick a photo",
+      "takePhoto": "Take a photo",
+      "openFile": "Open file",
+      "save": "Save",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "type": {
+      "FORM_100": "Form 100",
+      "PRESCRIPTION": "Prescription",
+      "BLOOD_TEST": "Blood test",
+      "CT_SCAN": "CT scan",
+      "MRI_SCAN": "MRI scan",
+      "ULTRASOUND": "Ultrasound",
+      "ECG": "ECG",
+      "LAB_ANALYSIS": "Lab analysis",
+      "OTHER": "Other"
+    },
+    "errors": {
+      "noFile": "Select a file before uploading",
+      "noClinic": "Clinic is required",
+      "fileTooBig": "File exceeds 15 MB limit",
+      "unsupportedType": "Unsupported file type (PDF, JPG, PNG, HEIC)",
+      "uploadFailed": "Upload failed",
+      "deleteFailed": "Delete failed",
+      "loadFailed": "Failed to load"
+    },
+    "deleteConfirmTitle": "Delete document?",
+    "deleteConfirmBody": "Are you sure you want to delete {{name}}? This cannot be undone."
   },
   "today": {
     "greeting": "Hello",

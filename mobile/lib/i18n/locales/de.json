@@ -132,8 +132,71 @@
     "today": "Heute",
     "upcoming": "Anstehend",
     "medications": "Medikamente",
+    "documents": "Dokumente",
     "add": "Hinzufügen",
     "profile": "Profil"
+  },
+  "documents": {
+    "title": "Meine Dokumente",
+    "subtitle": "Befunde, Formular 100, Laborergebnisse",
+    "emptyTitle": "Noch keine Dokumente",
+    "emptySubtitle": "Lade ein PDF oder Foto hoch und tagge es mit Datum, Klinik und Untersuchungstyp.",
+    "uploadCta": "Dokument hochladen",
+    "uploadCtaShort": "Hochladen",
+    "searchPlaceholder": "Suche (Klinik, Untersuchung, Datei)",
+    "filters": {
+      "all": "Alle",
+      "type": "Typ",
+      "clinic": "Klinik",
+      "date": "Datum",
+      "from": "Von",
+      "to": "Bis",
+      "clear": "Löschen"
+    },
+    "fields": {
+      "file": "Datei",
+      "documentType": "Untersuchungstyp",
+      "customType": "Genaue Bezeichnung (optional)",
+      "clinic": "Klinik",
+      "studyDate": "Untersuchungsdatum",
+      "uploadedAt": "Hochgeladen",
+      "notes": "Notizen",
+      "fileName": "Dateiname",
+      "fileSize": "Größe"
+    },
+    "actions": {
+      "pickFile": "Datei wählen",
+      "pickPdf": "PDF wählen",
+      "pickPhoto": "Foto wählen",
+      "takePhoto": "Foto aufnehmen",
+      "openFile": "Datei öffnen",
+      "save": "Speichern",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "type": {
+      "FORM_100": "Formular 100",
+      "PRESCRIPTION": "Rezept",
+      "BLOOD_TEST": "Blutuntersuchung",
+      "CT_SCAN": "CT-Scan",
+      "MRI_SCAN": "MRT",
+      "ULTRASOUND": "Ultraschall",
+      "ECG": "EKG",
+      "LAB_ANALYSIS": "Laboranalyse",
+      "OTHER": "Sonstiges"
+    },
+    "errors": {
+      "noFile": "Wähle eine Datei vor dem Hochladen",
+      "noClinic": "Klinik ist erforderlich",
+      "fileTooBig": "Datei überschreitet 15 MB",
+      "unsupportedType": "Nicht unterstützter Dateityp (PDF, JPG, PNG, HEIC)",
+      "uploadFailed": "Hochladen fehlgeschlagen",
+      "deleteFailed": "Löschen fehlgeschlagen",
+      "loadFailed": "Laden fehlgeschlagen"
+    },
+    "deleteConfirmTitle": "Dokument löschen?",
+    "deleteConfirmBody": "{{name}} wirklich löschen? Das kann nicht rückgängig gemacht werden."
   },
   "today": {
     "greeting": "Hallo",

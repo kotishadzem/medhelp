@@ -71,6 +71,8 @@ medhelp/
 - **RefreshToken** — JWT refresh tokens with rotation
 - **Medication** — Prescribed medication with schedule (times per day, specific hours)
 - **MedicationIntake** — Individual intake records (one per medication × time × day)
+- **FamilyLink** — accepted/requested links between users (caregiver relationships)
+- **MedicalDocument** — uploaded medical files (PDFs and photos) with metadata: documentType (enum), customType, clinic, studyDate, notes, fileName, storagePath, mimeType, fileSize
 
 ### Key Design Decisions
 
@@ -133,4 +135,49 @@ Biometric: Mobile-side → Unlocks stored refresh token → Auto-refresh
   marked TAKEN, when status changes (PAUSED/COMPLETED/CANCELLED), or
   when the medication is deleted. Logout cancels every scheduled
   notification. Web is a no-op.
+
+## Documents subsystem
+
+Users can upload medical documents (PDF, JPG, PNG, HEIC) up to 15 MB
+each. Each row is tagged with `documentType` (fixed enum: FORM_100,
+PRESCRIPTION, BLOOD_TEST, CT_SCAN, MRI_SCAN, ULTRASOUND, ECG,
+LAB_ANALYSIS, OTHER), an optional `customType` free-text label,
+`clinic`, `studyDate`, and optional `notes`.
+
+### Storage layout
+
+Files live on the backend container under `${UPLOADS_DIR}` — defaults
+to `/data/uploads` in production (Docker named volume `uploads`
+mounted into the backend service) and `./uploads` in dev. Per-row
+path: `documents/<userId>/<docId>.<ext>`. The DB row stores a relative
+`storagePath`; absolute resolution happens in the storage helper and
+is guarded against path traversal.
+
+### Route table
+
+| Path                                  | Method   | Purpose                                                              |
+|---------------------------------------|----------|----------------------------------------------------------------------|
+| `/api/documents`                      | `POST`   | multipart upload (`file` + `metadata` JSON). Validates mime + size.  |
+| `/api/documents`                      | `GET`    | list + filter (`from`, `to`, `clinic`, `type`, `q`, `forUserId`)     |
+| `/api/documents/[id]`                 | `GET`    | metadata of a single doc                                             |
+| `/api/documents/[id]`                 | `PATCH`  | update metadata fields                                               |
+| `/api/documents/[id]`                 | `DELETE` | delete DB row + on-disk file                                         |
+| `/api/documents/[id]/file`            | `GET`    | streams the binary with proper `Content-Type` + `Content-Disposition`|
+| `/api/documents/clinics`              | `GET`    | distinct clinics (frequency-ranked) for autocomplete                 |
+
+All routes require auth via `requireAuth()`. Ownership is enforced on
+every row read/write. Filter search (`q`) is case-insensitive across
+`fileName`, `customType`, `notes`, `clinic`.
+
+### Upload flow
+
+1. Mobile picks a file via `expo-document-picker` (PDF + photo mimes).
+2. Client builds `FormData` (`metadata` JSON string + `file` part). On
+   web the picker returns a real `File`; on native we pass `{uri, name,
+   type}` which React Native's FormData handles.
+3. The shared `apiRequest` detects FormData bodies and skips the JSON
+   `Content-Type` header so the boundary is auto-set.
+4. The POST route validates mime ∈ {pdf, jpeg, png, heic, heif} and
+   size ≤ 15 MB, then writes the file to disk and inserts the row.
+5. If the DB insert fails, the file is deleted to avoid orphans.
 

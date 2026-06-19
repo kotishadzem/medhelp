@@ -1,10 +1,13 @@
 import { apiRequest } from "./client";
+import { API_URL } from "@/lib/config";
 import type {
+  DocumentType,
   FamilyLink,
   FamilyOverview,
   IntakeStatus,
   IntakeWithMedication,
   LoginResponse,
+  MedicalDocument,
   Medication,
   MedicationIntake,
   MedicationStatus,
@@ -124,6 +127,70 @@ export const medicationsApi = {
 };
 
 export type CreateFamilyInput = { customName: string } & Identifier;
+
+export type DocumentMetadataInput = {
+  documentType: DocumentType;
+  customType?: string;
+  clinic: string;
+  studyDate: string;
+  notes?: string;
+  forUserId?: string;
+};
+
+export type ListDocumentsParams = {
+  from?: string;
+  to?: string;
+  clinic?: string;
+  type?: DocumentType;
+  q?: string;
+  forUserId?: string;
+};
+
+export type DocumentFileInput = {
+  uri: string;
+  name: string;
+  mimeType: string;
+};
+
+function buildDocumentsQuery(params: ListDocumentsParams): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") {
+      search.append(key, String(value));
+    }
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export const documentsApi = {
+  list: (params: ListDocumentsParams = {}) =>
+    apiRequest<{ documents: MedicalDocument[] }>(
+      `/documents${buildDocumentsQuery(params)}`
+    ),
+
+  detail: (id: string) =>
+    apiRequest<{ document: MedicalDocument }>(`/documents/${id}`),
+
+  create: (formData: FormData) =>
+    apiRequest<{ document: MedicalDocument }>("/documents", {
+      method: "POST",
+      body: formData,
+    }),
+
+  update: (id: string, patch: Partial<DocumentMetadataInput>) =>
+    apiRequest<{ document: MedicalDocument }>(`/documents/${id}`, {
+      method: "PATCH",
+      body: patch,
+    }),
+
+  remove: (id: string) =>
+    apiRequest<{ message: string }>(`/documents/${id}`, { method: "DELETE" }),
+
+  clinics: () => apiRequest<{ clinics: string[] }>("/documents/clinics"),
+
+  fileUrl: (id: string) => `${API_URL}/documents/${id}/file`,
+};
 
 export const familyApi = {
   list: () =>

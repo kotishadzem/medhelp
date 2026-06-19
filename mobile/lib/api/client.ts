@@ -31,6 +31,10 @@ type RequestOpts = {
   auth?: boolean;
 };
 
+function isFormData(value: unknown): value is FormData {
+  return typeof FormData !== "undefined" && value instanceof FormData;
+}
+
 let refreshInflight: Promise<string | null> | null = null;
 
 async function refreshAccessToken(): Promise<string | null> {
@@ -64,15 +68,22 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 async function rawRequest<T>(path: string, opts: RequestOpts, accessToken: string | null): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json; charset=utf-8",
-  };
+  const headers: Record<string, string> = {};
+  const bodyIsFormData = isFormData(opts.body);
+  if (!bodyIsFormData && opts.body !== undefined) {
+    headers["Content-Type"] = "application/json; charset=utf-8";
+  }
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+  let body: BodyInit | undefined;
+  if (opts.body !== undefined) {
+    body = bodyIsFormData ? (opts.body as FormData) : JSON.stringify(opts.body);
+  }
 
   const res = await fetch(`${API_URL}${path}`, {
     method: opts.method ?? "GET",
     headers,
-    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+    body,
   });
 
   const json = (await res.json()) as ApiResponse<T>;

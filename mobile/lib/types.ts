@@ -96,3 +96,30 @@ export type FamilyOverview = {
   };
   today: IntakeWithMedication[];
 };
+
+export type DocumentType =
+  | "FORM_100"
+  | "PRESCRIPTION"
+  | "BLOOD_TEST"
+  | "CT_SCAN"
+  | "MRI_SCAN"
+  | "ULTRASOUND"
+  | "ECG"
+  | "LAB_ANALYSIS"
+  | "OTHER";
+
+export type MedicalDocument = {
+  id: string;
+  userId: string;
+  forUserId: string | null;
+  documentType: DocumentType;
+  customType: string | null;
+  clinic: string;
+  studyDate: string;
+  notes: string | null;
+  fileName: string;
+  storagePath: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+};

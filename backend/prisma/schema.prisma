@@ -37,6 +37,18 @@ enum FamilyLinkStatus {
   REJECTED
 }
 
+enum DocumentType {
+  FORM_100
+  PRESCRIPTION
+  BLOOD_TEST
+  CT_SCAN
+  MRI_SCAN
+  ULTRASOUND
+  ECG
+  LAB_ANALYSIS
+  OTHER
+}
+
 model User {
   id            String         @id @default(cuid())
   phone         String?        @unique
@@ -52,6 +64,9 @@ model User {
 
   familyRequests FamilyLink[] @relation("FamilyRequester")
   familyTargets  FamilyLink[] @relation("FamilyTarget")
+
+  medicalDocuments      MedicalDocument[] @relation("OwnerDocuments")
+  medicalDocumentsAbout MedicalDocument[] @relation("SubjectDocuments")
 
   @@map("users")
 }
@@ -121,4 +136,27 @@ model MedicationIntake {
   @@index([scheduledAt])
   @@index([status])
   @@map("medication_intakes")
+}
+
+model MedicalDocument {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation("OwnerDocuments", fields: [userId], references: [id], onDelete: Cascade)
+  forUserId    String?
+  forUser      User?        @relation("SubjectDocuments", fields: [forUserId], references: [id], onDelete: SetNull)
+  documentType DocumentType
+  customType   String?
+  clinic       String
+  studyDate    DateTime
+  notes        String?
+  fileName     String
+  storagePath  String
+  mimeType     String
+  fileSize     Int
+  uploadedAt   DateTime     @default(now())
+
+  @@index([userId, studyDate(sort: Desc)])
+  @@index([userId, clinic])
+  @@index([userId, documentType])
+  @@map("medical_documents")
 }

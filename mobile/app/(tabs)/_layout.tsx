@@ -43,6 +43,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="documents"
+        options={{
+          title: t("tabs.documents"),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name={focused ? "folder" : "folder-outline"} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="medications"
         options={{
           title: "",
