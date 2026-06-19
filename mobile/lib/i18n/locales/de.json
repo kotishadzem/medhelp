@@ -139,6 +139,10 @@
   "documents": {
     "title": "Meine Dokumente",
     "subtitle": "Befunde, Formular 100, Laborergebnisse",
+    "forWhom": "Für wen?",
+    "forMe": "Für mich",
+    "tabMedications": "Medikamente",
+    "tabDocuments": "Dokumente",
     "emptyTitle": "Noch keine Dokumente",
     "emptySubtitle": "Lade ein PDF oder Foto hoch und tagge es mit Datum, Klinik und Untersuchungstyp.",
     "uploadCta": "Dokument hochladen",

@@ -139,6 +139,10 @@
   "documents": {
     "title": "My documents",
     "subtitle": "Medical reports, Form 100, lab results",
+    "forWhom": "For whom?",
+    "forMe": "For me",
+    "tabMedications": "Medications",
+    "tabDocuments": "Documents",
     "emptyTitle": "No documents yet",
     "emptySubtitle": "Upload a PDF or photo and tag it with date, clinic, and study type.",
     "uploadCta": "Upload a document",

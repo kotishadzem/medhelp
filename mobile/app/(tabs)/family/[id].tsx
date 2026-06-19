@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -12,23 +13,37 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { familyApi } from "@/lib/api/endpoints";
+import { documentsApi, familyApi } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/client";
+import { DocumentTypeIcon } from "@/components/DocumentTypeIcon";
 import { IntakeBadge, MedicationBadge } from "@/components/StatusBadge";
-import { formatTimeHHMM, timePeriod } from "@/lib/format";
-import type { FamilyParty, IntakeWithMedication, Medication } from "@/lib/types";
+import { formatDateLong, formatTimeHHMM, timePeriod } from "@/lib/format";
+import type {
+  FamilyParty,
+  IntakeWithMedication,
+  MedicalDocument,
+  Medication,
+} from "@/lib/types";
 import { medNameFontSize, useMedFontScale } from "@/lib/settings/SettingsContext";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
+
+type Tab = "medications" | "documents";
 
 export default function FamilyOverview() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const { medFontScale } = useMedFontScale();
+  const [tab, setTab] = useState<Tab>("medications");
   const query = useQuery({
     queryKey: ["family", "overview", id],
     queryFn: () => familyApi.overview(id!),
     enabled: !!id,
+  });
+  const documentsQuery = useQuery({
+    queryKey: ["documents", { forUserId: id }],
+    queryFn: () => documentsApi.list({ forUserId: id }),
+    enabled: !!id && tab === "documents",
   });
 
   if (query.isLoading) {
@@ -71,6 +86,80 @@ export default function FamilyOverview() {
         <View style={{ width: 26 }} />
       </View>
 
+      <View style={styles.tabSwitch}>
+        <Pressable
+          onPress={() => setTab("medications")}
+          style={({ pressed }) => [
+            styles.tabBtn,
+            tab === "medications" && styles.tabBtnActive,
+            pressed && { opacity: 0.85 },
+          ]}
+        >
+          <Ionicons
+            name="medkit-outline"
+            size={14}
+            color={tab === "medications" ? colors.bg : colors.textMuted}
+          />
+          <Text
+            style={[styles.tabBtnText, tab === "medications" && styles.tabBtnTextActive]}
+          >
+            {t("documents.tabMedications")}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setTab("documents")}
+          style={({ pressed }) => [
+            styles.tabBtn,
+            tab === "documents" && styles.tabBtnActive,
+            pressed && { opacity: 0.85 },
+          ]}
+        >
+          <Ionicons
+            name="folder-outline"
+            size={14}
+            color={tab === "documents" ? colors.bg : colors.textMuted}
+          />
+          <Text
+            style={[styles.tabBtnText, tab === "documents" && styles.tabBtnTextActive]}
+          >
+            {t("documents.tabDocuments")}
+          </Text>
+        </Pressable>
+      </View>
+
+      {tab === "documents" ? (
+        <ScrollView
+          contentContainerStyle={styles.body}
+          refreshControl={
+            <RefreshControl
+              refreshing={documentsQuery.isRefetching}
+              onRefresh={() => documentsQuery.refetch()}
+              tintColor={colors.primary}
+            />
+          }
+        >
+          {documentsQuery.isLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator color={colors.primary} />
+            </View>
+          ) : (documentsQuery.data?.documents.length ?? 0) === 0 ? (
+            <View style={styles.center}>
+              <Ionicons name="folder-open-outline" size={48} color={colors.textDim} />
+              <Text style={styles.muted}>{t("documents.emptyTitle")}</Text>
+            </View>
+          ) : (
+            (documentsQuery.data?.documents ?? []).map((doc) => (
+              <FamilyDocumentRow
+                key={doc.id}
+                doc={doc}
+                onPress={() =>
+                  router.push({ pathname: "/(tabs)/documents/[id]", params: { id: doc.id } })
+                }
+              />
+            ))
+          )}
+        </ScrollView>
+      ) : (
       <ScrollView
         contentContainerStyle={styles.body}
         refreshControl={
@@ -157,7 +246,41 @@ export default function FamilyOverview() {
           )}
         </View>
       </ScrollView>
+      )}
     </SafeAreaView>
+  );
+}
+
+function FamilyDocumentRow({
+  doc,
+  onPress,
+}: {
+  doc: MedicalDocument;
+  onPress: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.docRow, pressed && { opacity: 0.85 }]}
+    >
+      <DocumentTypeIcon type={doc.documentType} size={44} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.docRowTitle} numberOfLines={1}>
+          {doc.customType?.trim() || t(`documents.type.${doc.documentType}`)}
+        </Text>
+        <Text style={styles.docRowMeta} numberOfLines={1}>
+          {formatDateLong(doc.studyDate)} · {doc.clinic}
+        </Text>
+      </View>
+      {doc.files.length > 1 && (
+        <View style={styles.docRowBadge}>
+          <Ionicons name="documents-outline" size={12} color={colors.primary} />
+          <Text style={styles.docRowBadgeText}>{doc.files.length}</Text>
+        </View>
+      )}
+      <Ionicons name="chevron-forward" size={16} color={colors.textDim} />
+    </Pressable>
   );
 }
 
@@ -309,4 +432,49 @@ const styles = StyleSheet.create({
   },
   medName: { flex: 1, color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
   medMeta: { color: colors.textMuted, fontSize: fontSize.xs },
+
+  tabSwitch: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
+  },
+  tabBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+  },
+  tabBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  tabBtnText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },
+  tabBtnTextActive: { color: colors.bg, fontWeight: "800" },
+
+  docRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  docRowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "700" },
+  docRowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
+  docRowBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    backgroundColor: colors.primary + "22",
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  docRowBadgeText: { color: colors.primary, fontSize: fontSize.xs, fontWeight: "700" },
 });

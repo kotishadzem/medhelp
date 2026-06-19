@@ -20,7 +20,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { Button } from "@/components/Button";
 import { DocumentTypeIcon } from "@/components/DocumentTypeIcon";
 import { MonthCalendar } from "@/components/MonthCalendar";
-import { documentsApi } from "@/lib/api/endpoints";
+import { documentsApi, familyApi } from "@/lib/api/endpoints";
 import { formatDateLong, todayYMD } from "@/lib/format";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import type { DocumentType } from "@/lib/types";
@@ -75,6 +75,7 @@ export default function CreateDocumentScreen() {
   const router = useRouter();
   const qc = useQueryClient();
 
+  const [forUserId, setForUserId] = useState<string | null>(null);
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [documentType, setDocumentType] = useState<DocumentType>("FORM_100");
   const [customType, setCustomType] = useState("");
@@ -89,6 +90,11 @@ export default function CreateDocumentScreen() {
     queryKey: ["documents", "clinics"],
     queryFn: () => documentsApi.clinics(),
   });
+
+  const familyQuery = useQuery({ queryKey: ["family"], queryFn: familyApi.list });
+  const acceptedFamily = (familyQuery.data?.outgoing ?? []).filter(
+    (l) => l.status === "ACCEPTED" && !!l.target
+  );
 
   const clinicSuggestions = useMemo(() => {
     const all = clinicsQuery.data?.clinics ?? [];
@@ -106,6 +112,7 @@ export default function CreateDocumentScreen() {
       clinic: clinic.trim(),
       studyDate: `${studyYMD}T00:00:00.000Z`,
       notes: notes.trim() || undefined,
+      forUserId: forUserId ?? undefined,
     });
 
   const mutation = useMutation({
@@ -184,6 +191,33 @@ export default function CreateDocumentScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {acceptedFamily.length > 0 && (
+            <View style={styles.targetsBlock}>
+              <Text style={styles.targetsLabel}>{t("documents.forWhom")}</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.targetsRow}
+              >
+                <TargetChip
+                  active={forUserId === null}
+                  label={t("documents.forMe")}
+                  iconChar="🙂"
+                  onPress={() => setForUserId(null)}
+                />
+                {acceptedFamily.map((link) => (
+                  <TargetChip
+                    key={link.id}
+                    active={forUserId === link.targetId}
+                    label={link.customName}
+                    iconChar={(link.customName.trim() || "?").charAt(0)}
+                    onPress={() => setForUserId(link.targetId)}
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <Pressable
             onPress={pickFiles}
             style={({ pressed }) => [styles.filePicker, pressed && styles.pressed]}
@@ -367,6 +401,36 @@ export default function CreateDocumentScreen() {
   );
 }
 
+function TargetChip({
+  active,
+  label,
+  iconChar,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  iconChar: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.targetChip,
+        active && styles.targetChipActive,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
+      <View style={[styles.targetAvatar, active && styles.targetAvatarActive]}>
+        <Text style={[styles.targetAvatarText, active && styles.targetAvatarTextActive]}>
+          {iconChar}
+        </Text>
+      </View>
+      <Text style={[styles.targetLabel, active && styles.targetLabelActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View style={styles.field}>
@@ -426,6 +490,35 @@ const styles = StyleSheet.create({
   },
   fileChipName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: "600" },
   fileChipSize: { color: colors.textMuted, fontSize: fontSize.xs },
+
+  targetsBlock: { gap: spacing.xs },
+  targetsLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },
+  targetsRow: { gap: spacing.sm, paddingVertical: spacing.xs },
+  targetChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs + 2,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+  },
+  targetChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  targetAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  targetAvatarActive: { backgroundColor: colors.bg },
+  targetAvatarText: { color: colors.text, fontSize: 12, fontWeight: "700" },
+  targetAvatarTextActive: { color: colors.primary },
+  targetLabel: { color: colors.text, fontSize: fontSize.sm, fontWeight: "600" },
+  targetLabelActive: { color: colors.bg, fontWeight: "800" },
 
   field: { gap: spacing.xs + 2 },
   fieldLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },
