@@ -45,6 +45,15 @@ mobile/ios/
 
 # Testing
 coverage/
+scripts/_tmp/
 
 # cicd-aws skill local config
 cicd_aws.config
+
+# Local uploads (dev)
+backend/uploads/
+
+# Editor/MCP caches and one-off artifacts
+.playwright-mcp/
+*.bak
+medhelp-web-*.png
