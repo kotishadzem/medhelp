@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import crypto from "node:crypto";
 import { requireAuth } from "@/lib/auth";
+import { canAccessOwner } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { error, notFound, success } from "@/lib/responses";
 
@@ -27,10 +28,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (authError) return authError;
 
     const { id } = await params;
-    const document = await prisma.medicalDocument.findFirst({
-      where: { id, userId: user.userId },
-    });
+    const document = await prisma.medicalDocument.findUnique({ where: { id } });
     if (!document) return notFound("Document not found");
+    const allowed = await canAccessOwner(user.userId, document.userId);
+    if (!allowed) return notFound("Document not found");
 
     const token = crypto.randomBytes(SHARE_TOKEN_BYTES).toString("hex");
     const expiresAt = new Date();

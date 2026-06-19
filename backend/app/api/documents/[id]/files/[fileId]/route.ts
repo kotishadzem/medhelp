@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser, verifyAccessToken } from "@/lib/auth";
+import { canAccessOwner } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import { error, notFound, success, unauthorized } from "@/lib/responses";
 import { deleteDocumentFile, readDocumentFile } from "@/lib/storage/documents";
@@ -19,16 +20,27 @@ function resolveAuthenticatedUser(request: NextRequest): { userId: string } | nu
   }
 }
 
+async function findAccessibleFile(
+  currentUserId: string,
+  documentId: string,
+  fileId: string
+) {
+  const file = await prisma.medicalDocumentFile.findFirst({
+    where: { id: fileId, documentId },
+    include: { document: { select: { userId: true } } },
+  });
+  if (!file) return null;
+  const allowed = await canAccessOwner(currentUserId, file.document.userId);
+  return allowed ? file : null;
+}
+
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const user = resolveAuthenticatedUser(request);
     if (!user) return unauthorized();
 
     const { id, fileId } = await params;
-
-    const file = await prisma.medicalDocumentFile.findFirst({
-      where: { id: fileId, document: { id, userId: user.userId } },
-    });
+    const file = await findAccessibleFile(user.userId, id, fileId);
     if (!file) return notFound("File not found");
 
     const buffer = await readDocumentFile(file.storagePath);
@@ -54,9 +66,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     if (!fromHeader) return unauthorized();
     const { id, fileId } = await params;
 
-    const file = await prisma.medicalDocumentFile.findFirst({
-      where: { id: fileId, document: { id, userId: fromHeader.userId } },
-    });
+    const file = await findAccessibleFile(fromHeader.userId, id, fileId);
     if (!file) return notFound("File not found");
 
     await prisma.medicalDocumentFile.delete({ where: { id: file.id } });
