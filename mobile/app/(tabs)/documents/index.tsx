@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { DocumentsListView } from "@/components/DocumentsListView";
+import { ProfileButton } from "@/components/ProfileButton";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 export default function DocumentsListScreen() {
@@ -13,7 +14,8 @@ export default function DocumentsListScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
       <View style={styles.header}>
-        <View>
+        <ProfileButton />
+        <View style={styles.headerCenter}>
           <Text style={styles.title}>{t("documents.title")}</Text>
           <Text style={styles.subtitle}>{t("documents.subtitle")}</Text>
         </View>
@@ -43,18 +45,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: spacing.sm,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
+  headerCenter: { flex: 1 },
   title: {
     color: colors.text,
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: "800",
     letterSpacing: -0.5,
   },
-  subtitle: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
+  subtitle: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
   uploadBtn: {
     flexDirection: "row",
     alignItems: "center",

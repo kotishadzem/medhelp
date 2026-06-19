@@ -134,7 +134,12 @@
     "medications": "Medications",
     "documents": "Documents",
     "add": "Add",
-    "profile": "Profile"
+    "profile": "Profile",
+    "addWhat": "What would you like to add?",
+    "addMedication": "Medication",
+    "addMedicationSub": "A new prescription with a schedule",
+    "addDocument": "Document",
+    "addDocumentSub": "Lab results, Form 100, prescriptions"
   },
   "documents": {
     "title": "My documents",

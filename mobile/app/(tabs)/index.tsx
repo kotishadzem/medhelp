@@ -18,6 +18,7 @@ import { medNameFontSize, useMedFontScale } from "@/lib/settings/SettingsContext
 import { cancelForIntakes } from "@/lib/notifications";
 import { confirm } from "@/lib/confirm";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
+import { ProfileButton } from "@/components/ProfileButton";
 import {
   deriveIntakeStatus,
   formatTimeHHMM,
@@ -143,12 +144,15 @@ export default function TodayScreen() {
         }
       >
         <View style={styles.header}>
-          <Text style={styles.greeting}>
-            {user?.firstName
-              ? t("today.greetingNamed", { name: user.firstName })
-              : t("today.greeting")}
-          </Text>
-          <Text style={styles.dateLine}>{formatTodayLabel()}</Text>
+          <ProfileButton />
+          <View style={{ flex: 1, gap: spacing.xs }}>
+            <Text style={styles.greeting}>
+              {user?.firstName
+                ? t("today.greetingNamed", { name: user.firstName })
+                : t("today.greeting")}
+            </Text>
+            <Text style={styles.dateLine}>{formatTodayLabel()}</Text>
+          </View>
         </View>
 
         <View style={styles.statRow}>
@@ -323,7 +327,11 @@ function useTint() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.xl, gap: spacing.lg, paddingBottom: spacing.xxl * 2 },
-  header: { gap: spacing.xs },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
   greeting: {
     color: colors.text,
     fontSize: fontSize.xxl,

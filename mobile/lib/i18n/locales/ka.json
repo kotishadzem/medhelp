@@ -134,7 +134,12 @@
     "medications": "მედიკამენტები",
     "documents": "დოკუმენტები",
     "add": "დამატება",
-    "profile": "პროფილი"
+    "profile": "პროფილი",
+    "addWhat": "რის დამატება გინდა?",
+    "addMedication": "მედიკამენტი",
+    "addMedicationSub": "ახალი წამალი მიღების გრაფიკით",
+    "addDocument": "დოკუმენტი",
+    "addDocumentSub": "ანალიზის პასუხი, ფორმა 100, რეცეპტი"
   },
   "documents": {
     "title": "ჩემი დოკუმენტები",

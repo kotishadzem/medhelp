@@ -134,7 +134,12 @@
     "medications": "Medikamente",
     "documents": "Dokumente",
     "add": "Hinzufügen",
-    "profile": "Profil"
+    "profile": "Profil",
+    "addWhat": "Was möchtest du hinzufügen?",
+    "addMedication": "Medikament",
+    "addMedicationSub": "Neues Medikament mit Einnahmeplan",
+    "addDocument": "Dokument",
+    "addDocumentSub": "Befund, Formular 100, Rezept"
   },
   "documents": {
     "title": "Meine Dokumente",
