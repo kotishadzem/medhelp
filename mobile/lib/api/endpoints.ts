@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, getCurrentAccessToken } from "./client";
 import { API_URL } from "@/lib/config";
 import type {
   DocumentType,
@@ -189,7 +189,11 @@ export const documentsApi = {
 
   clinics: () => apiRequest<{ clinics: string[] }>("/documents/clinics"),
 
-  fileUrl: (id: string) => `${API_URL}/documents/${id}/file`,
+  fileUrl: (id: string) => {
+    const token = getCurrentAccessToken();
+    const qs = token ? `?token=${encodeURIComponent(token)}` : "";
+    return `${API_URL}/documents/${id}/file${qs}`;
+  },
 };
 
 export const familyApi = {

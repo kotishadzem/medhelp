@@ -25,6 +25,10 @@ export function configureTokens(provider: TokenProvider) {
   tokens = provider;
 }
 
+export function getCurrentAccessToken(): string | null {
+  return tokens?.getAccessToken() ?? null;
+}
+
 type RequestOpts = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
