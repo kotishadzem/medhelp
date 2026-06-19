@@ -20,7 +20,7 @@ import { Button } from "@/components/Button";
 import { DocumentTypeIcon } from "@/components/DocumentTypeIcon";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { documentsApi } from "@/lib/api/endpoints";
-import { formatDateLong, todayYMD } from "@/lib/format";
+import { formatDateLong, formatDateShort, todayYMD } from "@/lib/format";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import type { DocumentType, MedicalDocument } from "@/lib/types";
 
@@ -136,39 +136,38 @@ export default function DocumentsListScreen() {
       </ScrollView>
 
       <View style={styles.secondaryRow}>
-        <Pressable
+        <FilterChip
+          icon="business-outline"
+          label={clinic ?? t("documents.filters.clinic")}
+          active={!!clinic}
           onPress={() => setShowClinicPicker(true)}
-          style={({ pressed }) => [styles.softChip, pressed && styles.pressed]}
-        >
-          <Ionicons name="business-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.softChipText} numberOfLines={1}>
-            {clinic ?? t("documents.filters.clinic")}
-          </Text>
-        </Pressable>
-        <Pressable
+        />
+        <FilterChip
+          icon="calendar-outline"
+          label={
+            fromYMD
+              ? `${t("documents.filters.from")}: ${formatDateShort(`${fromYMD}T00:00:00`)}`
+              : t("documents.filters.from")
+          }
+          active={!!fromYMD}
           onPress={() => setShowDatePicker("from")}
-          style={({ pressed }) => [styles.softChip, pressed && styles.pressed]}
-        >
-          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.softChipText}>
-            {fromYMD ?? t("documents.filters.from")}
-          </Text>
-        </Pressable>
-        <Pressable
+        />
+        <FilterChip
+          icon="calendar-outline"
+          label={
+            toYMD
+              ? `${t("documents.filters.to")}: ${formatDateShort(`${toYMD}T00:00:00`)}`
+              : t("documents.filters.to")
+          }
+          active={!!toYMD}
           onPress={() => setShowDatePicker("to")}
-          style={({ pressed }) => [styles.softChip, pressed && styles.pressed]}
-        >
-          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.softChipText}>
-            {toYMD ?? t("documents.filters.to")}
-          </Text>
-        </Pressable>
+        />
         {hasFilters && (
           <Pressable
             onPress={clearFilters}
             style={({ pressed }) => [styles.clearChip, pressed && styles.pressed]}
           >
-            <Ionicons name="close" size={14} color={colors.danger} />
+            <Ionicons name="close" size={12} color={colors.danger} />
             <Text style={styles.clearChipText}>{t("documents.filters.clear")}</Text>
           </Pressable>
         )}
@@ -254,6 +253,39 @@ function Chip({
       ]}
     >
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function FilterChip({
+  icon,
+  label,
+  active,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        styles.chipWithIcon,
+        active && styles.chipActive,
+        pressed && styles.pressed,
+      ]}
+    >
+      <Ionicons
+        name={icon}
+        size={12}
+        color={active ? colors.bg : colors.textMuted}
+      />
+      <Text style={[styles.chipText, active && styles.chipTextActive]} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -424,47 +456,44 @@ const styles = StyleSheet.create({
 
   chipsRow: {
     paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    gap: spacing.xs + 2,
+    alignItems: "center",
   },
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    height: 28,
+    paddingHorizontal: spacing.md - 2,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chipWithIcon: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    maxWidth: 220,
   },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },
-  chipTextActive: { color: colors.bg, fontWeight: "800" },
+  chipText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: "600" },
+  chipTextActive: { color: colors.bg, fontWeight: "700" },
 
   secondaryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing.xs + 2,
     paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  softChip: {
-    flexDirection: "row",
+    paddingBottom: spacing.sm,
     alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.surfaceElevated,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    maxWidth: 180,
   },
-  softChipText: { color: colors.text, fontSize: fontSize.xs, fontWeight: "600" },
   clearChip: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+    height: 28,
+    paddingHorizontal: spacing.md - 2,
     borderRadius: radius.pill,
     borderWidth: 1,
     borderColor: colors.danger + "55",
