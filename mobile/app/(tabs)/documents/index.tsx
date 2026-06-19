@@ -49,6 +49,7 @@ export default function DocumentsListScreen() {
   const [toYMD, setToYMD] = useState<string | null>(null);
   const [showClinicPicker, setShowClinicPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState<DateMode | null>(null);
+  const [showFilterSheet, setShowFilterSheet] = useState(false);
 
   const params = useMemo(
     () => ({
@@ -115,34 +116,7 @@ export default function DocumentsListScreen() {
         )}
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.chipsScroll}
-        contentContainerStyle={styles.chipsRow}
-      >
-        <Chip
-          label={t("documents.filters.all")}
-          active={!type}
-          onPress={() => setType(null)}
-        />
-        {DOC_TYPES.map((dt) => (
-          <Chip
-            key={dt}
-            label={t(`documents.type.${dt}`)}
-            active={type === dt}
-            onPress={() => setType(type === dt ? null : dt)}
-          />
-        ))}
-      </ScrollView>
-
       <View style={styles.secondaryRow}>
-        <FilterChip
-          icon="business-outline"
-          label={clinic ?? t("documents.filters.clinic")}
-          active={!!clinic}
-          onPress={() => setShowClinicPicker(true)}
-        />
         <FilterChip
           icon="calendar-outline"
           label={
@@ -163,6 +137,31 @@ export default function DocumentsListScreen() {
           active={!!toYMD}
           onPress={() => setShowDatePicker("to")}
         />
+        <Pressable
+          onPress={() => setShowFilterSheet(true)}
+          style={({ pressed }) => [
+            styles.chip,
+            styles.chipWithIcon,
+            (type || clinic) && styles.chipActive,
+            pressed && styles.pressed,
+          ]}
+        >
+          <Ionicons
+            name="options-outline"
+            size={12}
+            color={type || clinic ? colors.bg : colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.chipText,
+              (type || clinic) && styles.chipTextActive,
+            ]}
+            numberOfLines={1}
+          >
+            {t("documents.filters.more")}
+            {type || clinic ? ` · ${[type ? t(`documents.type.${type}`) : null, clinic].filter(Boolean).join(", ")}` : ""}
+          </Text>
+        </Pressable>
         {hasFilters && (
           <Pressable
             onPress={clearFilters}
@@ -200,6 +199,16 @@ export default function DocumentsListScreen() {
           }
         />
       )}
+
+      <FilterSheet
+        visible={showFilterSheet}
+        onClose={() => setShowFilterSheet(false)}
+        type={type}
+        onType={setType}
+        clinic={clinic}
+        clinics={clinicsQuery.data?.clinics ?? []}
+        onClinic={setClinic}
+      />
 
       <ClinicPickerModal
         visible={showClinicPicker}
@@ -335,6 +344,92 @@ function EmptyState({ onUpload }: { onUpload: () => void }) {
       <Text style={styles.emptySubtitle}>{t("documents.emptySubtitle")}</Text>
       <Button label={t("documents.uploadCta")} onPress={onUpload} style={{ marginTop: spacing.lg }} />
     </View>
+  );
+}
+
+function FilterSheet({
+  visible,
+  onClose,
+  type,
+  onType,
+  clinic,
+  clinics,
+  onClinic,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  type: DocumentType | null;
+  onType: (t: DocumentType | null) => void;
+  clinic: string | null;
+  clinics: string[];
+  onClinic: (c: string | null) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.modalBackdrop} onPress={onClose}>
+        <Pressable style={styles.modalCard} onPress={() => {}}>
+          <Text style={styles.modalTitle}>{t("documents.filters.more")}</Text>
+
+          <Text style={styles.sheetSectionLabel}>
+            {t("documents.filters.type")}
+          </Text>
+          <View style={styles.sheetChipWrap}>
+            <Chip
+              label={t("documents.filters.all")}
+              active={!type}
+              onPress={() => onType(null)}
+            />
+            {DOC_TYPES.map((dt) => (
+              <Chip
+                key={dt}
+                label={t(`documents.type.${dt}`)}
+                active={type === dt}
+                onPress={() => onType(type === dt ? null : dt)}
+              />
+            ))}
+          </View>
+
+          <Text style={styles.sheetSectionLabel}>
+            {t("documents.filters.clinic")}
+          </Text>
+          <ScrollView style={{ maxHeight: 200 }}>
+            <Pressable
+              onPress={() => onClinic(null)}
+              style={({ pressed }) => [
+                styles.modalRow,
+                !clinic && styles.modalRowActive,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.modalRowText}>{t("documents.filters.all")}</Text>
+            </Pressable>
+            {clinics.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => onClinic(c)}
+                style={({ pressed }) => [
+                  styles.modalRow,
+                  clinic === c && styles.modalRowActive,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text style={styles.modalRowText}>{c}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+
+          <View style={styles.modalActions}>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [styles.modalActionBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.modalActionMain}>{t("documents.actions.cancel")}</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 }
 
@@ -611,5 +706,19 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSize.sm,
     fontWeight: "700",
+  },
+
+  sheetSectionLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginTop: spacing.sm,
+  },
+  sheetChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs + 2,
   },
 });

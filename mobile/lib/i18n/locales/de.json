@@ -151,6 +151,7 @@
       "date": "Datum",
       "from": "Von",
       "to": "Bis",
+      "more": "Filter",
       "clear": "Löschen"
     },
     "fields": {
