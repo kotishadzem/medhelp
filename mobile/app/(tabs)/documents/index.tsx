@@ -372,7 +372,14 @@ function ClinicPickerModal({
               </Pressable>
             ))}
           </ScrollView>
-          <Button label={t("documents.actions.cancel")} onPress={onClose} variant="ghost" />
+          <View style={styles.modalActions}>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [styles.modalActionBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.modalActionMain}>{t("documents.actions.cancel")}</Text>
+            </Pressable>
+          </View>
         </Pressable>
       </Pressable>
     </Modal>
@@ -402,8 +409,18 @@ function DatePickerModal({
           </Text>
           <MonthCalendar value={value} onChange={onSelect} />
           <View style={styles.modalActions}>
-            <Button label={t("documents.filters.clear")} variant="ghost" onPress={onClear} />
-            <Button label={t("documents.actions.cancel")} variant="secondary" onPress={onClose} />
+            <Pressable
+              onPress={onClear}
+              style={({ pressed }) => [styles.modalActionBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.modalActionGhost}>{t("documents.filters.clear")}</Text>
+            </Pressable>
+            <Pressable
+              onPress={onClose}
+              style={({ pressed }) => [styles.modalActionBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.modalActionMain}>{t("documents.actions.cancel")}</Text>
+            </Pressable>
           </View>
         </Pressable>
       </Pressable>
@@ -543,10 +560,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+    width: "100%",
+    maxWidth: 360,
+    alignSelf: "center",
   },
-  modalTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "800" },
+  modalTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "800" },
   modalRow: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
@@ -554,5 +574,25 @@ const styles = StyleSheet.create({
   },
   modalRowActive: { backgroundColor: colors.primaryMuted },
   modalRowText: { color: colors.text, fontSize: fontSize.md },
-  modalActions: { flexDirection: "row", gap: spacing.sm, justifyContent: "flex-end" },
+  modalActions: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "flex-end",
+    marginTop: spacing.xs,
+  },
+  modalActionBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+  },
+  modalActionGhost: {
+    color: colors.danger,
+    fontSize: fontSize.sm,
+    fontWeight: "700",
+  },
+  modalActionMain: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: "700",
+  },
 });

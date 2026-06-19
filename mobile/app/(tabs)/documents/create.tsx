@@ -317,7 +317,14 @@ export default function CreateDocumentScreen() {
                 setShowCalendar(false);
               }}
             />
-            <Button label={t("documents.actions.cancel")} variant="ghost" onPress={() => setShowCalendar(false)} />
+            <View style={styles.modalActions}>
+              <Pressable
+                onPress={() => setShowCalendar(false)}
+                style={({ pressed }) => [styles.modalActionBtn, pressed && styles.pressed]}
+              >
+                <Text style={styles.modalActionMain}>{t("documents.actions.cancel")}</Text>
+              </Pressable>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -416,10 +423,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
+    padding: spacing.md,
+    gap: spacing.sm,
+    width: "100%",
+    maxWidth: 360,
+    alignSelf: "center",
   },
-  modalTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "800" },
+  modalTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "800" },
   modalRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -430,4 +440,20 @@ const styles = StyleSheet.create({
   },
   modalRowActive: { backgroundColor: colors.primaryMuted },
   modalRowText: { color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
+  modalActions: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    justifyContent: "flex-end",
+    marginTop: spacing.xs,
+  },
+  modalActionBtn: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+  },
+  modalActionMain: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: "700",
+  },
 });
