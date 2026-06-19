@@ -315,6 +315,12 @@ function DocumentRow({
           {formatDateLong(document.studyDate)} · {document.clinic}
         </Text>
       </View>
+      {document.files.length > 1 && (
+        <View style={styles.rowBadge}>
+          <Ionicons name="documents-outline" size={12} color={colors.primary} />
+          <Text style={styles.rowBadgeText}>{document.files.length}</Text>
+        </View>
+      )}
       <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
     </Pressable>
   );
@@ -537,6 +543,17 @@ const styles = StyleSheet.create({
   rowMain: { flex: 1, gap: 2 },
   rowTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "700" },
   rowMeta: { color: colors.textMuted, fontSize: fontSize.sm },
+  rowBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    backgroundColor: colors.primary + "22",
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    marginRight: spacing.xs,
+  },
+  rowBadgeText: { color: colors.primary, fontSize: fontSize.xs, fontWeight: "700" },
 
   empty: { alignItems: "center", padding: spacing.xxl, gap: spacing.sm },
   emptyTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700", marginTop: spacing.md },

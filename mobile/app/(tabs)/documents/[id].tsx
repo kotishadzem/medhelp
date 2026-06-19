@@ -22,6 +22,7 @@ import { documentsApi } from "@/lib/api/endpoints";
 import { confirm } from "@/lib/confirm";
 import { formatDateLong } from "@/lib/format";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
+import type { MedicalDocumentFile } from "@/lib/types";
 
 export default function DocumentDetailScreen() {
   const { t } = useTranslation();
@@ -41,6 +42,20 @@ export default function DocumentDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["documents"] });
       router.back();
+    },
+    onError: (e) => {
+      Alert.alert(
+        t("documents.errors.deleteFailed"),
+        e instanceof Error ? e.message : ""
+      );
+    },
+  });
+
+  const removeFileMutation = useMutation({
+    mutationFn: (fileId: string) => documentsApi.removeFile(id, fileId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["documents"] });
+      qc.invalidateQueries({ queryKey: ["documents", "detail", id] });
     },
     onError: (e) => {
       Alert.alert(
@@ -72,25 +87,35 @@ export default function DocumentDetailScreen() {
     );
   }
 
-  const fileUrl = documentsApi.fileUrl(doc.id);
-  const isImage = doc.mimeType.startsWith("image/");
-
-  const openFile = async () => {
+  const openFile = async (fileId: string) => {
+    const url = documentsApi.fileUrl(doc.id, fileId);
     if (Platform.OS === "web") {
-      window.open(fileUrl, "_blank");
+      window.open(url, "_blank");
       return;
     }
     try {
-      await WebBrowser.openBrowserAsync(fileUrl);
+      await WebBrowser.openBrowserAsync(url);
     } catch {
-      await Linking.openURL(fileUrl);
+      await Linking.openURL(url);
     }
+  };
+
+  const onDeleteFile = async (file: MedicalDocumentFile) => {
+    const ok = await confirm({
+      title: t("documents.removeFileConfirmTitle"),
+      body: t("documents.removeFileConfirmBody", { name: file.fileName }),
+      confirmLabel: t("documents.actions.delete"),
+      cancelLabel: t("documents.actions.cancel"),
+    });
+    if (ok) removeFileMutation.mutate(file.id);
   };
 
   const onDelete = async () => {
     const ok = await confirm({
       title: t("documents.deleteConfirmTitle"),
-      body: t("documents.deleteConfirmBody", { name: doc.fileName }),
+      body: t("documents.deleteConfirmBody", {
+        name: doc.customType?.trim() || t(`documents.type.${doc.documentType}`),
+      }),
       confirmLabel: t("documents.actions.delete"),
       cancelLabel: t("documents.actions.cancel"),
     });
@@ -123,18 +148,6 @@ export default function DocumentDetailScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.previewCard}>
-          {isImage ? (
-            <Image source={{ uri: fileUrl }} style={styles.previewImage} resizeMode="contain" />
-          ) : (
-            <View style={styles.previewPdf}>
-              <DocumentTypeIcon type={doc.documentType} size={80} />
-              <Text style={styles.previewPdfText}>{doc.fileName}</Text>
-            </View>
-          )}
-          <Button label={t("documents.actions.openFile")} onPress={openFile} variant="secondary" />
-        </View>
-
         <Row label={t("documents.fields.documentType")} value={t(`documents.type.${doc.documentType}`)} />
         {doc.customType && (
           <Row label={t("documents.fields.customType")} value={doc.customType} />
@@ -142,9 +155,28 @@ export default function DocumentDetailScreen() {
         <Row label={t("documents.fields.clinic")} value={doc.clinic} />
         <Row label={t("documents.fields.studyDate")} value={formatDateLong(doc.studyDate)} />
         <Row label={t("documents.fields.uploadedAt")} value={formatDateLong(doc.uploadedAt)} />
-        <Row label={t("documents.fields.fileName")} value={doc.fileName} />
-        <Row label={t("documents.fields.fileSize")} value={`${Math.round(doc.fileSize / 1024)} KB`} />
         {doc.notes && <Row label={t("documents.fields.notes")} value={doc.notes} multiline />}
+
+        <View style={styles.filesSection}>
+          <Text style={styles.filesSectionLabel}>
+            {t("documents.attachedFiles")} ·{" "}
+            {t("documents.filesCount", { count: doc.files.length })}
+          </Text>
+          {doc.files.map((f) => (
+            <FileRow
+              key={f.id}
+              file={f}
+              docType={doc.documentType}
+              onOpen={() => openFile(f.id)}
+              onDelete={
+                doc.files.length > 1 ? () => onDeleteFile(f) : undefined
+              }
+              fileUrl={documentsApi.fileUrl(doc.id, f.id)}
+              tOpen={t("documents.actions.openFile")}
+              tDelete={t("documents.actions.delete")}
+            />
+          ))}
+        </View>
 
         <Button
           label={t("documents.actions.delete")}
@@ -154,6 +186,63 @@ export default function DocumentDetailScreen() {
         />
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function FileRow({
+  file,
+  docType,
+  fileUrl,
+  onOpen,
+  onDelete,
+  tOpen,
+  tDelete,
+}: {
+  file: MedicalDocumentFile;
+  docType: import("@/lib/types").DocumentType;
+  fileUrl: string;
+  onOpen: () => void;
+  onDelete?: () => void;
+  tOpen: string;
+  tDelete: string;
+}) {
+  const isImage = file.mimeType.startsWith("image/");
+  return (
+    <View style={styles.fileCard}>
+      <View style={styles.fileCardPreview}>
+        {isImage ? (
+          <Image source={{ uri: fileUrl }} style={styles.thumb} resizeMode="cover" />
+        ) : (
+          <DocumentTypeIcon type={docType} size={64} />
+        )}
+      </View>
+      <View style={styles.fileCardBody}>
+        <Text style={styles.fileCardName} numberOfLines={2}>
+          {file.fileName}
+        </Text>
+        <Text style={styles.fileCardMeta}>
+          {Math.round(file.fileSize / 1024)} KB · {file.mimeType.split("/")[1]?.toUpperCase()}
+        </Text>
+        <View style={styles.fileCardActions}>
+          <Pressable
+            onPress={onOpen}
+            style={({ pressed }) => [styles.fileAction, pressed && styles.pressed]}
+          >
+            <Ionicons name="open-outline" size={14} color={colors.primary} />
+            <Text style={styles.fileActionTextPrimary}>{tOpen}</Text>
+          </Pressable>
+          {onDelete && (
+            <Pressable
+              onPress={onDelete}
+              style={({ pressed }) => [styles.fileAction, pressed && styles.pressed]}
+            >
+              <Ionicons name="trash-outline" size={14} color={colors.danger} />
+              <Text style={styles.fileActionTextDanger}>{tDelete}</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -193,27 +282,32 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md },
   errorText: { color: colors.danger, fontSize: fontSize.md },
 
-  previewCard: {
+  filesSection: { gap: spacing.sm, marginTop: spacing.md },
+  filesSectionLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  fileCard: {
+    flexDirection: "row",
+    gap: spacing.md,
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
-    gap: spacing.md,
-    alignItems: "stretch",
-  },
-  previewImage: {
-    width: "100%",
-    height: 320,
     borderRadius: radius.md,
-    backgroundColor: colors.bg,
+    padding: spacing.md,
   },
-  previewPdf: {
-    alignItems: "center",
-    paddingVertical: spacing.xl,
-    gap: spacing.md,
-  },
-  previewPdfText: { color: colors.textMuted, fontSize: fontSize.sm },
+  fileCardPreview: { width: 72, alignItems: "center", justifyContent: "center" },
+  thumb: { width: 72, height: 72, borderRadius: radius.sm, backgroundColor: colors.bg },
+  fileCardBody: { flex: 1, gap: spacing.xs },
+  fileCardName: { color: colors.text, fontSize: fontSize.sm, fontWeight: "700" },
+  fileCardMeta: { color: colors.textMuted, fontSize: fontSize.xs },
+  fileCardActions: { flexDirection: "row", gap: spacing.md, marginTop: spacing.xs },
+  fileAction: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  fileActionTextPrimary: { color: colors.primary, fontSize: fontSize.xs, fontWeight: "700" },
+  fileActionTextDanger: { color: colors.danger, fontSize: fontSize.xs, fontWeight: "700" },
 
   row: {
     backgroundColor: colors.surface,

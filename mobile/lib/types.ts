@@ -108,6 +108,16 @@ export type DocumentType =
   | "LAB_ANALYSIS"
   | "OTHER";
 
+export type MedicalDocumentFile = {
+  id: string;
+  documentId: string;
+  fileName: string;
+  storagePath: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedAt: string;
+};
+
 export type MedicalDocument = {
   id: string;
   userId: string;
@@ -117,9 +127,6 @@ export type MedicalDocument = {
   clinic: string;
   studyDate: string;
   notes: string | null;
-  fileName: string;
-  storagePath: string;
-  mimeType: string;
-  fileSize: number;
   uploadedAt: string;
+  files: MedicalDocumentFile[];
 };

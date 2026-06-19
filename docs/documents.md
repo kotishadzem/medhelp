@@ -2,7 +2,9 @@
 
 Users can keep a personal archive of medical paperwork — Form 100s,
 prescriptions, lab results, imaging reports — and search them later
-by date, clinic, or study type.
+by date, clinic, or study type. Each "study" can have **one or more
+attached files**: a single visit that produces, say, a PDF report
+plus two photographed pages stays as one document with three files.
 
 ## Supported files
 
@@ -32,15 +34,28 @@ Georgian and German display names are in
 
 ## User flow
 
-1. **Documents** tab in the main bottom bar → list view.
-2. Tap **Upload** → pick a file from the device, then fill:
+1. **Documents** tab in the main bottom bar → list view. Rows that
+   have more than one attached file show a small badge with the
+   file count.
+2. Tap **Upload** → pick one or more files from the device, then
+   fill:
    - **Study type** (enum picker)
    - **Exact name** (optional free text)
    - **Clinic** (text input with autocomplete from prior clinics)
    - **Study date** (calendar picker — date the test was performed)
    - **Notes** (optional)
-3. Save → server validates, writes the file to disk, returns the row.
+3. Save → server validates each file, writes them to disk, and
+   creates **one** document with all the attached files.
 4. List shows the new row immediately (React Query invalidation).
+
+## Detail and edit
+
+- The detail screen lists every attached file with its own **Open**
+  button (images preview inline, PDFs open in a new tab) and, when
+  more than one file is attached, a **Delete** button per file.
+- The edit screen lets you change every metadata field and **add
+  more files** to the same study, or remove individual files
+  (cannot remove the last one — delete the whole document instead).
 
 ## Search & filter
 

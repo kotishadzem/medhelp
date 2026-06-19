@@ -72,7 +72,8 @@ medhelp/
 - **Medication** — Prescribed medication with schedule (times per day, specific hours)
 - **MedicationIntake** — Individual intake records (one per medication × time × day)
 - **FamilyLink** — accepted/requested links between users (caregiver relationships)
-- **MedicalDocument** — uploaded medical files (PDFs and photos) with metadata: documentType (enum), customType, clinic, studyDate, notes, fileName, storagePath, mimeType, fileSize
+- **MedicalDocument** — one "study" tagged with documentType (enum), customType, clinic, studyDate, and notes. Has one-to-many to MedicalDocumentFile.
+- **MedicalDocumentFile** — a single uploaded PDF or photo attached to a MedicalDocument. Holds fileName, storagePath, mimeType, fileSize.
 
 ### Key Design Decisions
 
@@ -155,15 +156,17 @@ is guarded against path traversal.
 
 ### Route table
 
-| Path                                  | Method   | Purpose                                                              |
-|---------------------------------------|----------|----------------------------------------------------------------------|
-| `/api/documents`                      | `POST`   | multipart upload (`file` + `metadata` JSON). Validates mime + size.  |
-| `/api/documents`                      | `GET`    | list + filter (`from`, `to`, `clinic`, `type`, `q`, `forUserId`)     |
-| `/api/documents/[id]`                 | `GET`    | metadata of a single doc                                             |
-| `/api/documents/[id]`                 | `PATCH`  | update metadata fields                                               |
-| `/api/documents/[id]`                 | `DELETE` | delete DB row + on-disk file                                         |
-| `/api/documents/[id]/file`            | `GET`    | streams the binary with proper `Content-Type` + `Content-Disposition`|
-| `/api/documents/clinics`              | `GET`    | distinct clinics (frequency-ranked) for autocomplete                 |
+| Path                                       | Method   | Purpose                                                              |
+|--------------------------------------------|----------|----------------------------------------------------------------------|
+| `/api/documents`                           | `POST`   | multipart upload (one or more `file` parts + `metadata` JSON) — creates one document with N files. Validates mime + size per part. |
+| `/api/documents`                           | `GET`    | list + filter (`from`, `to`, `clinic`, `type`, `q`, `forUserId`); each document includes its `files` array |
+| `/api/documents/[id]`                      | `GET`    | metadata + files of a single document                                |
+| `/api/documents/[id]`                      | `PATCH`  | update metadata fields                                               |
+| `/api/documents/[id]`                      | `DELETE` | delete document + all attached files (DB cascade + on-disk cleanup)  |
+| `/api/documents/[id]/files`                | `POST`   | append one or more new files to an existing document                 |
+| `/api/documents/[id]/files/[fileId]`       | `GET`    | streams a specific file binary; supports `?token=` for browser-tab opens |
+| `/api/documents/[id]/files/[fileId]`       | `DELETE` | removes a single file from a document (DB row + on-disk file)        |
+| `/api/documents/clinics`                   | `GET`    | distinct clinics (frequency-ranked) for autocomplete                 |
 
 All routes require auth via `requireAuth()`. Ownership is enforced on
 every row read/write. Filter search (`q`) is case-insensitive across
@@ -171,13 +174,19 @@ every row read/write. Filter search (`q`) is case-insensitive across
 
 ### Upload flow
 
-1. Mobile picks a file via `expo-document-picker` (PDF + photo mimes).
-2. Client builds `FormData` (`metadata` JSON string + `file` part). On
-   web the picker returns a real `File`; on native we pass `{uri, name,
-   type}` which React Native's FormData handles.
+1. Mobile picks one or more files via `expo-document-picker`
+   (`multiple: true`, PDF + photo mimes).
+2. Client builds `FormData` with the `metadata` JSON string and one
+   `file` part per picked file. On web the picker returns a real
+   `File`; on native we pass `{uri, name, type}` which React Native's
+   FormData handles.
 3. The shared `apiRequest` detects FormData bodies and skips the JSON
    `Content-Type` header so the boundary is auto-set.
-4. The POST route validates mime ∈ {pdf, jpeg, png, heic, heif} and
-   size ≤ 15 MB, then writes the file to disk and inserts the row.
-5. If the DB insert fails, the file is deleted to avoid orphans.
+4. The POST route validates each file's mime ∈ {pdf, jpeg, png, heic,
+   heif} and size ≤ 15 MB *before* any write hits disk. Then it
+   writes each file under its own `documents/<userId>/<fileId>.<ext>`
+   path and creates one `MedicalDocument` row plus one
+   `MedicalDocumentFile` row per file in a single Prisma create.
+5. If any failure happens mid-flight, the already-written files are
+   removed to avoid orphans.
 

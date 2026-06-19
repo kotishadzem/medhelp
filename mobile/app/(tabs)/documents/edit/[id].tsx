@@ -22,9 +22,10 @@ import { Button } from "@/components/Button";
 import { DocumentTypeIcon } from "@/components/DocumentTypeIcon";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { documentsApi } from "@/lib/api/endpoints";
+import { confirm } from "@/lib/confirm";
 import { formatDateLong } from "@/lib/format";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
-import type { DocumentType } from "@/lib/types";
+import type { DocumentType, MedicalDocumentFile } from "@/lib/types";
 
 const DOC_TYPES: DocumentType[] = [
   "FORM_100",
@@ -55,6 +56,21 @@ type PickedFile = {
   webFile: File | Blob | null;
 };
 
+function appendFilePart(form: FormData, file: PickedFile) {
+  if (file.webFile) {
+    form.append("file", file.webFile, file.name);
+  } else {
+    form.append(
+      "file",
+      {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType,
+      } as unknown as Blob
+    );
+  }
+}
+
 export default function EditDocumentScreen() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -77,12 +93,11 @@ export default function EditDocumentScreen() {
   const [clinic, setClinic] = useState("");
   const [studyYMD, setStudyYMD] = useState<string>("");
   const [notes, setNotes] = useState("");
-  const [newFile, setNewFile] = useState<PickedFile | null>(null);
+  const [newFiles, setNewFiles] = useState<PickedFile[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showClinicSuggestions, setShowClinicSuggestions] = useState(false);
 
-  // Hydrate form when the detail query resolves.
   useEffect(() => {
     const doc = detailQuery.data?.document;
     if (!doc) return;
@@ -112,21 +127,10 @@ export default function EditDocumentScreen() {
         studyDate: `${studyYMD}T00:00:00.000Z`,
         notes: notes.trim() || undefined,
       });
-      if (newFile) {
+      if (newFiles.length > 0) {
         const form = new FormData();
-        if (newFile.webFile) {
-          form.append("file", newFile.webFile, newFile.name);
-        } else {
-          form.append(
-            "file",
-            {
-              uri: newFile.uri,
-              name: newFile.name,
-              type: newFile.mimeType,
-            } as unknown as Blob
-          );
-        }
-        await documentsApi.replaceFile(id, form);
+        for (const f of newFiles) appendFilePart(form, f);
+        await documentsApi.addFiles(id, form);
       }
     },
     onSuccess: () => {
@@ -142,32 +146,63 @@ export default function EditDocumentScreen() {
     },
   });
 
-  async function pickNewFile() {
+  const removeFileMutation = useMutation({
+    mutationFn: (fileId: string) => documentsApi.removeFile(id, fileId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["documents"] });
+      qc.invalidateQueries({ queryKey: ["documents", "detail", id] });
+    },
+    onError: (e) => {
+      Alert.alert(
+        t("documents.errors.deleteFailed"),
+        e instanceof Error ? e.message : ""
+      );
+    },
+  });
+
+  async function pickFiles() {
     const result = await DocumentPicker.getDocumentAsync({
       type: ALLOWED_MIMES,
-      multiple: false,
+      multiple: true,
       copyToCacheDirectory: true,
     });
     if (result.canceled) return;
-    const asset = result.assets[0];
-    if (!asset) return;
-    const mime = (asset.mimeType ?? "application/octet-stream").toLowerCase();
-    if (!ALLOWED_MIMES.includes(mime)) {
-      Alert.alert(t("documents.errors.unsupportedType"));
-      return;
+    const added: PickedFile[] = [];
+    for (const asset of result.assets) {
+      const mime = (asset.mimeType ?? "application/octet-stream").toLowerCase();
+      if (!ALLOWED_MIMES.includes(mime)) {
+        Alert.alert(t("documents.errors.unsupportedType"), asset.name ?? "");
+        continue;
+      }
+      const size = asset.size ?? 0;
+      if (size > MAX_BYTES) {
+        Alert.alert(t("documents.errors.fileTooBig"), asset.name ?? "");
+        continue;
+      }
+      added.push({
+        uri: asset.uri,
+        name: asset.name ?? "document",
+        mimeType: mime,
+        size,
+        webFile: (asset as { file?: File }).file ?? null,
+      });
     }
-    const size = asset.size ?? 0;
-    if (size > MAX_BYTES) {
-      Alert.alert(t("documents.errors.fileTooBig"));
-      return;
-    }
-    setNewFile({
-      uri: asset.uri,
-      name: asset.name ?? "document",
-      mimeType: mime,
-      size,
-      webFile: (asset as { file?: File }).file ?? null,
+    if (added.length === 0) return;
+    setNewFiles((prev) => [...prev, ...added]);
+  }
+
+  async function removeExistingFile(file: MedicalDocumentFile) {
+    const ok = await confirm({
+      title: t("documents.removeFileConfirmTitle"),
+      body: t("documents.removeFileConfirmBody", { name: file.fileName }),
+      confirmLabel: t("documents.actions.delete"),
+      cancelLabel: t("documents.actions.cancel"),
     });
+    if (ok) removeFileMutation.mutate(file.id);
+  }
+
+  function removeNewFile(idx: number) {
+    setNewFiles((prev) => prev.filter((_, i) => i !== idx));
   }
 
   if (detailQuery.isLoading || !detailQuery.data) {
@@ -201,39 +236,6 @@ export default function EditDocumentScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <View style={styles.fileCard}>
-            <View style={styles.fileCardLeft}>
-              <Ionicons
-                name={
-                  (newFile ?? currentDoc).mimeType?.startsWith("image/")
-                    ? "image-outline"
-                    : "document-outline"
-                }
-                size={20}
-                color={colors.textMuted}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fileCardName} numberOfLines={1}>
-                  {newFile?.name ?? currentDoc.fileName}
-                </Text>
-                <Text style={styles.fileCardMeta}>
-                  {newFile
-                    ? `${Math.round(newFile.size / 1024)} KB · ${t("documents.fileReplacedNote")}`
-                    : `${Math.round(currentDoc.fileSize / 1024)} KB · ${currentDoc.mimeType}`}
-                </Text>
-              </View>
-            </View>
-            <Pressable
-              onPress={pickNewFile}
-              style={({ pressed }) => [styles.replaceBtn, pressed && styles.pressed]}
-            >
-              <Ionicons name="swap-horizontal" size={14} color={colors.bg} />
-              <Text style={styles.replaceBtnText}>
-                {t("documents.actions.replaceFile")}
-              </Text>
-            </Pressable>
-          </View>
-
           <Field label={t("documents.fields.documentType")}>
             <Pressable
               onPress={() => setShowTypePicker(true)}
@@ -309,6 +311,59 @@ export default function EditDocumentScreen() {
               textAlignVertical="top"
             />
           </Field>
+
+          <Text style={styles.sectionLabel}>{t("documents.attachedFiles")}</Text>
+          <View style={styles.fileList}>
+            {currentDoc.files.map((f) => (
+              <View key={f.id} style={styles.fileChip}>
+                <Ionicons
+                  name={f.mimeType.startsWith("image/") ? "image-outline" : "document-outline"}
+                  size={16}
+                  color={colors.textMuted}
+                />
+                <Text style={styles.fileChipName} numberOfLines={1}>
+                  {f.fileName}
+                </Text>
+                <Text style={styles.fileChipSize}>
+                  {Math.round(f.fileSize / 1024)} KB
+                </Text>
+                {currentDoc.files.length > 1 && (
+                  <Pressable
+                    onPress={() => removeExistingFile(f)}
+                    hitSlop={6}
+                    style={({ pressed }) => pressed && styles.pressed}
+                  >
+                    <Ionicons name="close" size={16} color={colors.danger} />
+                  </Pressable>
+                )}
+              </View>
+            ))}
+            {newFiles.map((f, idx) => (
+              <View key={`new-${idx}`} style={[styles.fileChip, styles.fileChipNew]}>
+                <Ionicons name="add-circle" size={16} color={colors.primary} />
+                <Text style={styles.fileChipName} numberOfLines={1}>
+                  {f.name}
+                </Text>
+                <Text style={styles.fileChipSize}>
+                  {Math.round(f.size / 1024)} KB
+                </Text>
+                <Pressable
+                  onPress={() => removeNewFile(idx)}
+                  hitSlop={6}
+                  style={({ pressed }) => pressed && styles.pressed}
+                >
+                  <Ionicons name="close" size={16} color={colors.danger} />
+                </Pressable>
+              </View>
+            ))}
+            <Pressable
+              onPress={pickFiles}
+              style={({ pressed }) => [styles.addFilesBtn, pressed && styles.pressed]}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
+              <Text style={styles.addFilesBtnText}>{t("documents.actions.addFiles")}</Text>
+            </Pressable>
+          </View>
 
           <Button
             label={t("documents.actions.save")}
@@ -400,35 +455,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.lg, paddingBottom: spacing.xxl * 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
 
-  fileCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: spacing.md,
-  },
-  fileCardLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  fileCardName: { color: colors.text, fontSize: fontSize.sm, fontWeight: "700" },
-  fileCardMeta: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
-  replaceBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.pill,
-  },
-  replaceBtnText: { color: colors.bg, fontSize: fontSize.xs, fontWeight: "700" },
-
   field: { gap: spacing.xs + 2 },
   fieldLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },
 
@@ -450,6 +476,42 @@ const styles = StyleSheet.create({
   },
   inputValue: { flex: 1, color: colors.text, fontSize: fontSize.md, fontWeight: "600" },
   textArea: { minHeight: 96 },
+
+  sectionLabel: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  fileList: { gap: spacing.xs },
+  fileChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  fileChipNew: { borderColor: colors.primary + "55" },
+  fileChipName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: "600" },
+  fileChipSize: { color: colors.textMuted, fontSize: fontSize.xs },
+  addFilesBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.surface,
+    borderStyle: "dashed",
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+  },
+  addFilesBtnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: "700" },
 
   suggestionList: {
     marginTop: spacing.xs,

@@ -178,10 +178,15 @@ export const documentsApi = {
       body: formData,
     }),
 
-  replaceFile: (id: string, formData: FormData) =>
-    apiRequest<{ document: MedicalDocument }>(`/documents/${id}/file`, {
+  addFiles: (id: string, formData: FormData) =>
+    apiRequest<{ files: MedicalDocument["files"] }>(`/documents/${id}/files`, {
       method: "POST",
       body: formData,
+    }),
+
+  removeFile: (id: string, fileId: string) =>
+    apiRequest<{ message: string }>(`/documents/${id}/files/${fileId}`, {
+      method: "DELETE",
     }),
 
   update: (id: string, patch: Partial<DocumentMetadataInput>) =>
@@ -195,10 +200,10 @@ export const documentsApi = {
 
   clinics: () => apiRequest<{ clinics: string[] }>("/documents/clinics"),
 
-  fileUrl: (id: string) => {
+  fileUrl: (id: string, fileId: string) => {
     const token = getCurrentAccessToken();
     const qs = token ? `?token=${encodeURIComponent(token)}` : "";
-    return `${API_URL}/documents/${id}/file${qs}`;
+    return `${API_URL}/documents/${id}/files/${fileId}${qs}`;
   },
 };
 

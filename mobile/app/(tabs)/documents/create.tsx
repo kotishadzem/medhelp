@@ -84,7 +84,6 @@ export default function CreateDocumentScreen() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [showClinicSuggestions, setShowClinicSuggestions] = useState(false);
-  const [uploadedCount, setUploadedCount] = useState(0);
 
   const clinicsQuery = useQuery({
     queryKey: ["documents", "clinics"],
@@ -112,18 +111,12 @@ export default function CreateDocumentScreen() {
   const mutation = useMutation({
     mutationFn: async () => {
       if (files.length === 0) throw new Error("file");
-      setUploadedCount(0);
-      const meta = metadataBlob();
-      const results = [];
+      const form = new FormData();
+      form.append("metadata", metadataBlob());
       for (const file of files) {
-        const form = new FormData();
-        form.append("metadata", meta);
         buildFilePart(form, file);
-        const result = await documentsApi.create(form);
-        results.push(result);
-        setUploadedCount((n) => n + 1);
       }
-      return results;
+      return documentsApi.create(form);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["documents"] });
@@ -312,14 +305,7 @@ export default function CreateDocumentScreen() {
           </Field>
 
           <Button
-            label={
-              mutation.isPending && files.length > 1
-                ? t("documents.uploadingProgress", {
-                    done: uploadedCount,
-                    total: files.length,
-                  })
-                : t("documents.actions.save")
-            }
+            label={t("documents.actions.save")}
             onPress={() => mutation.mutate()}
             disabled={!canSave}
             loading={mutation.isPending}

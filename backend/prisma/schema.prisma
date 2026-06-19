@@ -139,24 +139,35 @@ model MedicationIntake {
 }
 
 model MedicalDocument {
-  id           String       @id @default(cuid())
+  id           String                @id @default(cuid())
   userId       String
-  user         User         @relation("OwnerDocuments", fields: [userId], references: [id], onDelete: Cascade)
+  user         User                  @relation("OwnerDocuments", fields: [userId], references: [id], onDelete: Cascade)
   forUserId    String?
-  forUser      User?        @relation("SubjectDocuments", fields: [forUserId], references: [id], onDelete: SetNull)
+  forUser      User?                 @relation("SubjectDocuments", fields: [forUserId], references: [id], onDelete: SetNull)
   documentType DocumentType
   customType   String?
   clinic       String
   studyDate    DateTime
   notes        String?
-  fileName     String
-  storagePath  String
-  mimeType     String
-  fileSize     Int
-  uploadedAt   DateTime     @default(now())
+  uploadedAt   DateTime              @default(now())
+  files        MedicalDocumentFile[]
 
   @@index([userId, studyDate(sort: Desc)])
   @@index([userId, clinic])
   @@index([userId, documentType])
   @@map("medical_documents")
+}
+
+model MedicalDocumentFile {
+  id          String          @id @default(cuid())
+  documentId  String
+  document    MedicalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  fileName    String
+  storagePath String
+  mimeType    String
+  fileSize    Int
+  uploadedAt  DateTime        @default(now())
+
+  @@index([documentId])
+  @@map("medical_document_files")
 }

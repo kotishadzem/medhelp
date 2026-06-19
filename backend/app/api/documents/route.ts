@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { error, success, validationError } from "@/lib/responses";
 import {
   createDocumentMetadataSchema,
-  documentTypeSchema,
   listDocumentsQuerySchema,
 } from "@/lib/validators/documents";
 import {
@@ -64,16 +63,19 @@ export async function GET(request: NextRequest) {
     if (type) where.documentType = type;
     if (q) {
       where.OR = [
-        { fileName: { contains: q, mode: "insensitive" } },
         { customType: { contains: q, mode: "insensitive" } },
         { notes: { contains: q, mode: "insensitive" } },
         { clinic: { contains: q, mode: "insensitive" } },
+        { files: { some: { fileName: { contains: q, mode: "insensitive" } } } },
       ];
     }
 
     const documents = await prisma.medicalDocument.findMany({
       where,
       orderBy: { studyDate: "desc" },
+      include: {
+        files: { orderBy: { uploadedAt: "asc" } },
+      },
     });
 
     return success({ documents });
@@ -83,17 +85,19 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  let savedRelativePath: string | null = null;
+  const savedPaths: string[] = [];
   try {
     const { user, error: authError } = requireAuth(request);
     if (authError) return authError;
 
     const formData = await request.formData();
-    const filePart = formData.get(FILE_FIELD);
+    const fileParts = formData
+      .getAll(FILE_FIELD)
+      .filter((p): p is File => p instanceof Blob) as File[];
     const metadataPart = formData.get(METADATA_FIELD);
 
-    if (!(filePart instanceof Blob)) {
-      return validationError("file field is required");
+    if (fileParts.length === 0) {
+      return validationError("at least one file is required");
     }
     if (typeof metadataPart !== "string") {
       return validationError("metadata field is required");
@@ -111,25 +115,31 @@ export async function POST(request: NextRequest) {
       return validationError(parsed.error.issues[0].message);
     }
 
-    const { documentType, customType, clinic, studyDate, notes, forUserId } =
-      parsed.data;
+    const { documentType, customType, clinic, studyDate, notes, forUserId } = parsed.data;
 
-    const mimeType = (filePart.type || "application/octet-stream").toLowerCase();
-    if (!isAllowedMime(mimeType)) {
-      return validationError(
-        "Unsupported file type — allowed: PDF, JPG, PNG, HEIC"
-      );
-    }
-    if (filePart.size > MAX_FILE_SIZE_BYTES) {
-      return validationError("File exceeds 15 MB limit");
-    }
-    if (filePart.size === 0) {
-      return validationError("File is empty");
-    }
-
-    const extension = getExtensionForMime(mimeType);
-    if (!extension) {
-      return validationError("Unsupported file extension");
+    // Validate every file up-front before we write any of them.
+    const prepared: {
+      buffer: Buffer;
+      mimeType: string;
+      extension: string;
+      fileName: string;
+    }[] = [];
+    for (const part of fileParts) {
+      const mimeType = (part.type || "application/octet-stream").toLowerCase();
+      if (!isAllowedMime(mimeType)) {
+        return validationError("Unsupported file type — allowed: PDF, JPG, PNG, HEIC");
+      }
+      if (part.size > MAX_FILE_SIZE_BYTES) {
+        return validationError("File exceeds 15 MB limit");
+      }
+      if (part.size === 0) {
+        return validationError("File is empty");
+      }
+      const extension = getExtensionForMime(mimeType);
+      if (!extension) return validationError("Unsupported file extension");
+      const buffer = Buffer.from(await part.arrayBuffer());
+      const originalName = part.name ? part.name : `document.${extension}`;
+      prepared.push({ buffer, mimeType, extension, fileName: originalName.slice(0, 255) });
     }
 
     let ownerId = user.userId;
@@ -152,38 +162,44 @@ export async function POST(request: NextRequest) {
       ownerId = forUserId;
     }
 
-    const docId = randomUUID();
-    const arrayBuffer = await filePart.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const originalName =
-      filePart instanceof File && filePart.name ? filePart.name : `document.${extension}`;
-
-    savedRelativePath = await saveDocumentFile(ownerId, docId, extension, buffer);
+    // Write each file to disk and accumulate file rows.
+    const filesData: Prisma.MedicalDocumentFileCreateWithoutDocumentInput[] = [];
+    for (const item of prepared) {
+      const fileId = randomUUID();
+      const storagePath = await saveDocumentFile(
+        ownerId,
+        fileId,
+        item.extension,
+        item.buffer
+      );
+      savedPaths.push(storagePath);
+      filesData.push({
+        id: fileId,
+        fileName: item.fileName,
+        storagePath,
+        mimeType: item.mimeType,
+        fileSize: item.buffer.length,
+      });
+    }
 
     const document = await prisma.medicalDocument.create({
       data: {
-        id: docId,
         userId: ownerId,
         documentType,
         customType: customType ?? null,
         clinic,
         studyDate,
         notes: notes ?? null,
-        fileName: originalName.slice(0, 255),
-        storagePath: savedRelativePath,
-        mimeType,
-        fileSize: buffer.length,
+        files: { create: filesData },
       },
+      include: { files: { orderBy: { uploadedAt: "asc" } } },
     });
 
     return success({ document }, 201);
   } catch {
-    if (savedRelativePath) {
-      await deleteDocumentFile(savedRelativePath).catch(() => {});
+    for (const path of savedPaths) {
+      await deleteDocumentFile(path).catch(() => {});
     }
     return error("Internal server error", 500);
   }
 }
-
-// Re-export to keep tree-shake friendly if needed in tests
-export { documentTypeSchema };

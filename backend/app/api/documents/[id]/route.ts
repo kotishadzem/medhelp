@@ -16,6 +16,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     const document = await prisma.medicalDocument.findFirst({
       where: { id, userId: user.userId },
+      include: { files: { orderBy: { uploadedAt: "asc" } } },
     });
     if (!document) return notFound("Document not found");
 
@@ -46,6 +47,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const document = await prisma.medicalDocument.update({
       where: { id },
       data: parsed.data,
+      include: { files: { orderBy: { uploadedAt: "asc" } } },
     });
 
     return success({ document });
@@ -63,13 +65,16 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     const existing = await prisma.medicalDocument.findFirst({
       where: { id, userId: user.userId },
+      include: { files: true },
     });
     if (!existing) return notFound("Document not found");
 
     await prisma.medicalDocument.delete({ where: { id } });
-    await deleteDocumentFile(existing.storagePath).catch((err) => {
-      console.error("Failed to delete document file", err);
-    });
+    for (const f of existing.files) {
+      await deleteDocumentFile(f.storagePath).catch((err) => {
+        console.error("Failed to delete document file", err);
+      });
+    }
 
     return success({ message: "Document deleted" });
   } catch {

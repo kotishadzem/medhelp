@@ -76,9 +76,40 @@ def upload(
         meta["customType"] = custom_type
     if notes:
         meta["notes"] = notes
-    files = {
-        "file": (file_path.name, file_path.read_bytes(), mime),
+    files = [("file", (file_path.name, file_path.read_bytes(), mime))]
+    data = {"metadata": json.dumps(meta)}
+    r = requests.post(
+        f"{BASE}/documents",
+        headers=headers(token),
+        files=files,
+        data=data,
+        timeout=15,
+    )
+    return r.json()
+
+
+def upload_many(
+    token: str,
+    file_paths: list[tuple[Path, str]],
+    *,
+    document_type: str,
+    custom_type: str | None,
+    clinic: str,
+    study_date: str,
+    notes: str | None = None,
+) -> dict[str, Any]:
+    meta: dict[str, Any] = {
+        "documentType": document_type,
+        "clinic": clinic,
+        "studyDate": study_date,
     }
+    if custom_type:
+        meta["customType"] = custom_type
+    if notes:
+        meta["notes"] = notes
+    files = [
+        ("file", (p.name, p.read_bytes(), m)) for p, m in file_paths
+    ]
     data = {"metadata": json.dumps(meta)}
     r = requests.post(
         f"{BASE}/documents",
@@ -280,16 +311,19 @@ def main() -> int:
         f"{BASE}/documents/{doc1['id']}", headers=headers(token_a)
     ).json()
     check("get detail of doc1", r.get("success") is True)
+    doc1_files = r["data"]["document"]["files"]
     check(
         "detail metadata matches upload",
         r["data"]["document"]["customType"] == "Hemoglobin"
-        and r["data"]["document"]["fileSize"] == pdf_path.stat().st_size,
+        and len(doc1_files) == 1
+        and doc1_files[0]["fileSize"] == pdf_path.stat().st_size,
     )
 
     # ---- file streaming ----
     print("\n--- File streaming ---")
+    file0_id = doc1_files[0]["id"]
     r = requests.get(
-        f"{BASE}/documents/{doc1['id']}/file",
+        f"{BASE}/documents/{doc1['id']}/files/{file0_id}",
         headers=headers(token_a),
         timeout=10,
     )
@@ -337,7 +371,7 @@ def main() -> int:
     check("user B GET doc1 -> 404", r.get("success") is False)
 
     r = requests.get(
-        f"{BASE}/documents/{doc1['id']}/file", headers=headers(token_b)
+        f"{BASE}/documents/{doc1['id']}/files/{file0_id}", headers=headers(token_b)
     ).json()
     check("user B GET file -> 404", r.get("success") is False)
 
@@ -395,54 +429,98 @@ def main() -> int:
         and r.get("error", {}).get("code") == "VALIDATION_ERROR",
     )
 
-    # ---- File replace ----
-    print("\n--- File replace (POST /api/documents/[id]/file) ---")
-    new_payload = b"%PDF-1.4\nREPLACED-content-much-longer-than-original\n%%EOF\n"
-    new_pdf = tmp / "replacement.pdf"
-    new_pdf.write_bytes(new_payload)
-    old_storage = doc3["storagePath"].replace("\\", "/")
-    repl = requests.post(
-        f"{BASE}/documents/{doc3['id']}/file",
-        headers=headers(token_a),
-        files={"file": (new_pdf.name, new_pdf.read_bytes(), "application/pdf")},
-        timeout=15,
-    ).json()
-    check("file replace succeeds", repl.get("success") is True, json.dumps(repl)[:200])
-    new_storage = repl["data"]["document"]["storagePath"].replace("\\", "/")
-    check("storagePath changed", new_storage != old_storage)
+    # ---- Multi-file upload (one document, N files) ----
+    print("\n--- Multi-file upload ---")
+    m1 = tmp / "study-a.pdf"
+    m2 = tmp / "study-b.pdf"
+    m3 = tmp / "study-c.png"
+    m1.write_bytes(b"%PDF-1.4\nfirst attachment\n%%EOF\n")
+    m2.write_bytes(b"%PDF-1.4\nsecond attachment\n%%EOF\n")
+    m3.write_bytes(png_path.read_bytes())
+    multi = upload_many(
+        token_a,
+        [(m1, "application/pdf"), (m2, "application/pdf"), (m3, "image/png")],
+        document_type="ULTRASOUND",
+        custom_type=None,
+        clinic="Imaging Center",
+        study_date="2026-06-10T00:00:00.000Z",
+    )
+    check("multi-file upload succeeds", multi.get("success") is True, json.dumps(multi)[:200])
+    multi_doc = multi["data"]["document"] if multi.get("success") else {}
     check(
-        "fileName + size reflect new file",
-        repl["data"]["document"]["fileName"] == new_pdf.name
-        and repl["data"]["document"]["fileSize"] == len(new_payload),
+        "multi-file doc has 3 attached files",
+        len(multi_doc.get("files", [])) == 3,
+        f"got {len(multi_doc.get('files', []))}",
     )
-    check("old file removed from disk", not (UPLOADS_ROOT / old_storage).exists())
-    check("new file present on disk", (UPLOADS_ROOT / new_storage).is_file())
-    dl = requests.get(
-        f"{BASE}/documents/{doc3['id']}/file", headers=headers(token_a)
+
+    # ---- Per-file streaming ----
+    print("\n--- Per-file streaming ---")
+    f0 = multi_doc["files"][0]
+    r = requests.get(
+        f"{BASE}/documents/{multi_doc['id']}/files/{f0['id']}",
+        headers=headers(token_a),
     )
-    check("GET file now returns replaced bytes", dl.content == new_payload)
-    # User B should not be able to replace
-    hijack = requests.post(
-        f"{BASE}/documents/{doc3['id']}/file",
+    expected = m1.read_bytes() if f0["fileName"] == m1.name else (
+        m2.read_bytes() if f0["fileName"] == m2.name else m3.read_bytes()
+    )
+    check("GET per-file streams correct bytes", r.status_code == 200 and r.content == expected)
+    # Token via query string (browser path)
+    r2 = requests.get(
+        f"{BASE}/documents/{multi_doc['id']}/files/{f0['id']}?token={token_a}"
+    )
+    check("per-file streaming via ?token works", r2.status_code == 200 and r2.content == expected)
+
+    # ---- Add files (POST /documents/[id]/files) ----
+    print("\n--- Add files ---")
+    extra = tmp / "extra.pdf"
+    extra.write_bytes(b"%PDF-1.4\nextra evidence\n%%EOF\n")
+    add = requests.post(
+        f"{BASE}/documents/{multi_doc['id']}/files",
+        headers=headers(token_a),
+        files=[("file", (extra.name, extra.read_bytes(), "application/pdf"))],
+    ).json()
+    check("add files succeeds", add.get("success") is True, json.dumps(add)[:200])
+    r = requests.get(
+        f"{BASE}/documents/{multi_doc['id']}", headers=headers(token_a)
+    ).json()
+    check("doc now has 4 files", len(r["data"]["document"]["files"]) == 4)
+
+    # ---- Remove individual file ----
+    print("\n--- Remove single file ---")
+    added_id = add["data"]["files"][0]["id"]
+    rm = requests.delete(
+        f"{BASE}/documents/{multi_doc['id']}/files/{added_id}",
+        headers=headers(token_a),
+    ).json()
+    check("remove single file succeeds", rm.get("success") is True)
+    r = requests.get(
+        f"{BASE}/documents/{multi_doc['id']}", headers=headers(token_a)
+    ).json()
+    check("doc now has 3 files again", len(r["data"]["document"]["files"]) == 3)
+
+    # ---- Auth: user B cannot add/remove ----
+    print("\n--- Auth on file ops ---")
+    hijack_add = requests.post(
+        f"{BASE}/documents/{multi_doc['id']}/files",
         headers=headers(token_b),
-        files={"file": (new_pdf.name, new_pdf.read_bytes(), "application/pdf")},
+        files=[("file", (extra.name, extra.read_bytes(), "application/pdf"))],
     ).json()
-    check("user B replace -> 404", hijack.get("success") is False)
-    # Bad mime replace
-    bad = requests.post(
-        f"{BASE}/documents/{doc3['id']}/file",
-        headers=headers(token_a),
-        files={"file": ("x.txt", b"hi", "text/plain")},
+    check("user B add file -> 404", hijack_add.get("success") is False)
+    hijack_rm = requests.delete(
+        f"{BASE}/documents/{multi_doc['id']}/files/{f0['id']}",
+        headers=headers(token_b),
     ).json()
-    check(
-        "replace with bad mime -> validation error",
-        bad.get("success") is False
-        and bad.get("error", {}).get("code") == "VALIDATION_ERROR",
-    )
+    check("user B remove file -> 404", hijack_rm.get("success") is False)
+
+    # ---- Cleanup multi-doc ----
+    requests.delete(f"{BASE}/documents/{multi_doc['id']}", headers=headers(token_a))
 
     # ---- DELETE + on-disk file cleanup ----
     print("\n--- DELETE + on-disk cleanup ---")
-    storage_path = doc2["storagePath"].replace("\\", "/")
+    doc2_after_query = requests.get(
+        f"{BASE}/documents/{doc2['id']}", headers=headers(token_a)
+    ).json()["data"]["document"]
+    storage_path = doc2_after_query["files"][0]["storagePath"].replace("\\", "/")
     abs_path = UPLOADS_ROOT / storage_path
     check("doc2 file exists on disk before delete", abs_path.is_file(), str(abs_path))
 
