@@ -200,6 +200,21 @@ export const documentsApi = {
 
   clinics: () => apiRequest<{ clinics: string[] }>("/documents/clinics"),
 
+  createShare: (id: string) =>
+    apiRequest<{
+      share: { id: string; token: string; expiresAt: string };
+      url: string;
+    }>(`/documents/${id}/share`, { method: "POST" }),
+
+  publicShare: (token: string) =>
+    apiRequest<{
+      share: { token: string; expiresAt: string };
+      document: Omit<MedicalDocument, "userId" | "forUserId">;
+    }>(`/share/${encodeURIComponent(token)}`, { auth: false }),
+
+  publicShareFileUrl: (token: string, fileId: string) =>
+    `${API_URL}/share/${encodeURIComponent(token)}/files/${fileId}`,
+
   fileUrl: (id: string, fileId: string) => {
     const token = getCurrentAccessToken();
     const qs = token ? `?token=${encodeURIComponent(token)}` : "";

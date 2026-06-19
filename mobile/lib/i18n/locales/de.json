@@ -187,6 +187,22 @@
     "attachedFiles": "Angehängte Dateien",
     "removeFileConfirmTitle": "Datei entfernen?",
     "removeFileConfirmBody": "{{name}} löschen? Das kann nicht rückgängig gemacht werden.",
+    "share": {
+      "action": "Teilen",
+      "title": "Dokument teilen",
+      "hint": "Link gilt bis {{expires}}. Verschicke ihn über E-Mail, Telegram, WhatsApp oder SMS.",
+      "copyLink": "Link kopieren",
+      "copied": "Kopiert",
+      "viaEmail": "Per E-Mail senden",
+      "viaSystem": "Systemfreigabe",
+      "linkLabel": "Link",
+      "emailSubject": "MedHelp: medizinisches Dokument",
+      "emailBody": "Ich teile ein medizinisches Dokument mit dir — der Link ist aktiv und die Dateien sind verfügbar:",
+      "createFailed": "Freigabelink konnte nicht erstellt werden",
+      "publicTitle": "Geteiltes Dokument",
+      "publicExpired": "Dieser Link ist abgelaufen oder ungültig.",
+      "publicFooter": "MedHelp · geteiltes Dokument"
+    },
     "type": {
       "FORM_100": "Formular 100",
       "PRESCRIPTION": "Rezept",

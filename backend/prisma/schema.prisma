@@ -67,6 +67,7 @@ model User {
 
   medicalDocuments      MedicalDocument[] @relation("OwnerDocuments")
   medicalDocumentsAbout MedicalDocument[] @relation("SubjectDocuments")
+  documentShares        DocumentShare[]
 
   @@map("users")
 }
@@ -151,6 +152,7 @@ model MedicalDocument {
   notes        String?
   uploadedAt   DateTime              @default(now())
   files        MedicalDocumentFile[]
+  shares       DocumentShare[]
 
   @@index([userId, studyDate(sort: Desc)])
   @@index([userId, clinic])
@@ -170,4 +172,18 @@ model MedicalDocumentFile {
 
   @@index([documentId])
   @@map("medical_document_files")
+}
+
+model DocumentShare {
+  id          String          @id @default(cuid())
+  documentId  String
+  document    MedicalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  token       String          @unique
+  expiresAt   DateTime
+  createdAt   DateTime        @default(now())
+
+  @@index([documentId])
+  @@map("document_shares")
 }

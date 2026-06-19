@@ -187,6 +187,22 @@
     "attachedFiles": "Attached files",
     "removeFileConfirmTitle": "Remove file?",
     "removeFileConfirmBody": "Delete {{name}}? This cannot be undone.",
+    "share": {
+      "action": "Share",
+      "title": "Share document",
+      "hint": "Link works until {{expires}}. Send via any channel — email, Telegram, WhatsApp, SMS.",
+      "copyLink": "Copy link",
+      "copied": "Copied",
+      "viaEmail": "Send via Email",
+      "viaSystem": "System share",
+      "linkLabel": "Link",
+      "emailSubject": "MedHelp: medical document",
+      "emailBody": "I'm sharing a medical document with you — the link is active and the files are attached:",
+      "createFailed": "Could not create share link",
+      "publicTitle": "Shared document",
+      "publicExpired": "This link is expired or invalid.",
+      "publicFooter": "MedHelp · Shared document"
+    },
     "type": {
       "FORM_100": "Form 100",
       "PRESCRIPTION": "Prescription",

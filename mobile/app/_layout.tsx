@@ -56,6 +56,7 @@ function RootNavigator() {
       <Stack.Protected guard={!readyForApp}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
+      <Stack.Screen name="share/[token]" />
     </Stack>
   );
 }
