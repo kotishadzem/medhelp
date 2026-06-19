@@ -40,10 +40,11 @@ export default function FamilyOverview() {
     queryFn: () => familyApi.overview(id!),
     enabled: !!id,
   });
+  const targetUserId = query.data?.target.id;
   const documentsQuery = useQuery({
-    queryKey: ["documents", { forUserId: id }],
-    queryFn: () => documentsApi.list({ forUserId: id }),
-    enabled: !!id && tab === "documents",
+    queryKey: ["documents", { forUserId: targetUserId }],
+    queryFn: () => documentsApi.list({ forUserId: targetUserId! }),
+    enabled: !!targetUserId && tab === "documents",
   });
 
   if (query.isLoading) {
