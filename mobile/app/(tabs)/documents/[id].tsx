@@ -110,7 +110,16 @@ export default function DocumentDetailScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {doc.customType?.trim() || t(`documents.type.${doc.documentType}`)}
         </Text>
-        <View style={{ width: 32 }} />
+        <Pressable
+          onPress={() =>
+            router.push({ pathname: "/(tabs)/documents/edit/[id]", params: { id: doc.id } })
+          }
+          hitSlop={8}
+          style={({ pressed }) => [styles.editBtn, pressed && styles.pressed]}
+        >
+          <Ionicons name="create-outline" size={18} color={colors.primary} />
+          <Text style={styles.editBtnText}>{t("documents.actions.edit")}</Text>
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -170,6 +179,14 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   headerTitle: { color: colors.text, fontSize: fontSize.lg, fontWeight: "700", flex: 1, textAlign: "center" },
+  editBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    height: 32,
+  },
+  editBtnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: "700" },
   pressed: { opacity: 0.7 },
 
   content: { padding: spacing.xl, gap: spacing.md, paddingBottom: spacing.xxl * 2 },

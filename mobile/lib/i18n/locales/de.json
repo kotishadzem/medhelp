@@ -166,15 +166,22 @@
     },
     "actions": {
       "pickFile": "Datei wählen",
+      "pickFiles": "Dateien wählen",
       "pickPdf": "PDF wählen",
       "pickPhoto": "Foto wählen",
       "takePhoto": "Foto aufnehmen",
       "openFile": "Datei öffnen",
+      "replaceFile": "Datei ersetzen",
       "save": "Speichern",
       "edit": "Bearbeiten",
       "delete": "Löschen",
       "cancel": "Abbrechen"
     },
+    "editTitle": "Dokument bearbeiten",
+    "selectedFilesCount": "{{count}} Datei(en) ausgewählt",
+    "uploadingProgress": "Hochladen: {{done}} / {{total}}",
+    "multipleFilesHint": "Du kannst mehrere Dateien gleichzeitig hochladen — sie teilen sich die Metadaten.",
+    "fileReplacedNote": "Die Datei wird durch die neue ersetzt",
     "type": {
       "FORM_100": "Formular 100",
       "PRESCRIPTION": "Rezept",

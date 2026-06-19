@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Modal,
@@ -14,14 +15,14 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import * as DocumentPicker from "expo-document-picker";
 import { Button } from "@/components/Button";
 import { DocumentTypeIcon } from "@/components/DocumentTypeIcon";
 import { MonthCalendar } from "@/components/MonthCalendar";
 import { documentsApi } from "@/lib/api/endpoints";
-import { formatDateLong, todayYMD } from "@/lib/format";
+import { formatDateLong } from "@/lib/format";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import type { DocumentType } from "@/lib/types";
 
@@ -51,45 +52,46 @@ type PickedFile = {
   name: string;
   mimeType: string;
   size: number;
-  // Browser-only: the real File/Blob to pass into FormData. Native uses {uri, name, type}.
   webFile: File | Blob | null;
 };
 
-export function buildFilePart(form: FormData, file: PickedFile) {
-  if (file.webFile) {
-    form.append("file", file.webFile, file.name);
-  } else {
-    form.append(
-      "file",
-      {
-        uri: file.uri,
-        name: file.name,
-        type: file.mimeType,
-      } as unknown as Blob
-    );
-  }
-}
-
-export default function CreateDocumentScreen() {
+export default function EditDocumentScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const qc = useQueryClient();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-  const [files, setFiles] = useState<PickedFile[]>([]);
-  const [documentType, setDocumentType] = useState<DocumentType>("FORM_100");
-  const [customType, setCustomType] = useState("");
-  const [clinic, setClinic] = useState("");
-  const [studyYMD, setStudyYMD] = useState<string>(todayYMD());
-  const [notes, setNotes] = useState("");
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [showTypePicker, setShowTypePicker] = useState(false);
-  const [showClinicSuggestions, setShowClinicSuggestions] = useState(false);
-  const [uploadedCount, setUploadedCount] = useState(0);
+  const detailQuery = useQuery({
+    queryKey: ["documents", "detail", id],
+    queryFn: () => documentsApi.detail(id),
+    enabled: !!id,
+  });
 
   const clinicsQuery = useQuery({
     queryKey: ["documents", "clinics"],
     queryFn: () => documentsApi.clinics(),
   });
+
+  const [documentType, setDocumentType] = useState<DocumentType>("FORM_100");
+  const [customType, setCustomType] = useState("");
+  const [clinic, setClinic] = useState("");
+  const [studyYMD, setStudyYMD] = useState<string>("");
+  const [notes, setNotes] = useState("");
+  const [newFile, setNewFile] = useState<PickedFile | null>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showTypePicker, setShowTypePicker] = useState(false);
+  const [showClinicSuggestions, setShowClinicSuggestions] = useState(false);
+
+  // Hydrate form when the detail query resolves.
+  useEffect(() => {
+    const doc = detailQuery.data?.document;
+    if (!doc) return;
+    setDocumentType(doc.documentType);
+    setCustomType(doc.customType ?? "");
+    setClinic(doc.clinic);
+    setStudyYMD(doc.studyDate.slice(0, 10));
+    setNotes(doc.notes ?? "");
+  }, [detailQuery.data]);
 
   const clinicSuggestions = useMemo(() => {
     const all = clinicsQuery.data?.clinics ?? [];
@@ -98,35 +100,38 @@ export default function CreateDocumentScreen() {
     return all.filter((c) => c.toLowerCase().includes(q)).slice(0, 5);
   }, [clinic, clinicsQuery.data]);
 
-  const canSave = files.length > 0 && !!clinic.trim() && !!documentType && !!studyYMD;
+  const canSave =
+    !!detailQuery.data && !!clinic.trim() && !!documentType && !!studyYMD;
 
-  const metadataBlob = () =>
-    JSON.stringify({
-      documentType,
-      customType: customType.trim() || undefined,
-      clinic: clinic.trim(),
-      studyDate: `${studyYMD}T00:00:00.000Z`,
-      notes: notes.trim() || undefined,
-    });
-
-  const mutation = useMutation({
+  const saveMutation = useMutation({
     mutationFn: async () => {
-      if (files.length === 0) throw new Error("file");
-      setUploadedCount(0);
-      const meta = metadataBlob();
-      const results = [];
-      for (const file of files) {
+      await documentsApi.update(id, {
+        documentType,
+        customType: customType.trim() || undefined,
+        clinic: clinic.trim(),
+        studyDate: `${studyYMD}T00:00:00.000Z`,
+        notes: notes.trim() || undefined,
+      });
+      if (newFile) {
         const form = new FormData();
-        form.append("metadata", meta);
-        buildFilePart(form, file);
-        const result = await documentsApi.create(form);
-        results.push(result);
-        setUploadedCount((n) => n + 1);
+        if (newFile.webFile) {
+          form.append("file", newFile.webFile, newFile.name);
+        } else {
+          form.append(
+            "file",
+            {
+              uri: newFile.uri,
+              name: newFile.name,
+              type: newFile.mimeType,
+            } as unknown as Blob
+          );
+        }
+        await documentsApi.replaceFile(id, form);
       }
-      return results;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["documents"] });
+      qc.invalidateQueries({ queryKey: ["documents", "detail", id] });
       router.back();
     },
     onError: (e) => {
@@ -137,40 +142,45 @@ export default function CreateDocumentScreen() {
     },
   });
 
-  async function pickFiles() {
+  async function pickNewFile() {
     const result = await DocumentPicker.getDocumentAsync({
       type: ALLOWED_MIMES,
-      multiple: true,
+      multiple: false,
       copyToCacheDirectory: true,
     });
     if (result.canceled) return;
-    const added: PickedFile[] = [];
-    for (const asset of result.assets) {
-      const mime = (asset.mimeType ?? "application/octet-stream").toLowerCase();
-      if (!ALLOWED_MIMES.includes(mime)) {
-        Alert.alert(t("documents.errors.unsupportedType"), asset.name ?? "");
-        continue;
-      }
-      const size = asset.size ?? 0;
-      if (size > MAX_BYTES) {
-        Alert.alert(t("documents.errors.fileTooBig"), asset.name ?? "");
-        continue;
-      }
-      added.push({
-        uri: asset.uri,
-        name: asset.name ?? "document",
-        mimeType: mime,
-        size,
-        webFile: (asset as { file?: File }).file ?? null,
-      });
+    const asset = result.assets[0];
+    if (!asset) return;
+    const mime = (asset.mimeType ?? "application/octet-stream").toLowerCase();
+    if (!ALLOWED_MIMES.includes(mime)) {
+      Alert.alert(t("documents.errors.unsupportedType"));
+      return;
     }
-    if (added.length === 0) return;
-    setFiles((prev) => [...prev, ...added]);
+    const size = asset.size ?? 0;
+    if (size > MAX_BYTES) {
+      Alert.alert(t("documents.errors.fileTooBig"));
+      return;
+    }
+    setNewFile({
+      uri: asset.uri,
+      name: asset.name ?? "document",
+      mimeType: mime,
+      size,
+      webFile: (asset as { file?: File }).file ?? null,
+    });
   }
 
-  function removeFile(idx: number) {
-    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  if (detailQuery.isLoading || !detailQuery.data) {
+    return (
+      <SafeAreaView style={styles.root} edges={["top"]}>
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
   }
+
+  const currentDoc = detailQuery.data.document;
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "left", "right"]}>
@@ -186,52 +196,43 @@ export default function CreateDocumentScreen() {
           >
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>{t("documents.uploadCta")}</Text>
+          <Text style={styles.headerTitle}>{t("documents.editTitle")}</Text>
           <View style={{ width: 32 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Pressable
-            onPress={pickFiles}
-            style={({ pressed }) => [styles.filePicker, pressed && styles.pressed]}
-          >
-            <Ionicons
-              name={files.length > 0 ? "checkmark-circle" : "cloud-upload-outline"}
-              size={36}
-              color={files.length > 0 ? colors.success : colors.primary}
-            />
-            <Text style={styles.filePickerTitle}>
-              {files.length === 0
-                ? t("documents.actions.pickFiles")
-                : t("documents.selectedFilesCount", { count: files.length })}
-            </Text>
-            <Text style={styles.filePickerMeta}>{t("documents.multipleFilesHint")}</Text>
-          </Pressable>
-
-          {files.length > 0 && (
-            <View style={styles.fileList}>
-              {files.map((f, idx) => (
-                <View key={`${f.uri}-${idx}`} style={styles.fileChip}>
-                  <Ionicons
-                    name={f.mimeType.startsWith("image/") ? "image-outline" : "document-outline"}
-                    size={16}
-                    color={colors.textMuted}
-                  />
-                  <Text style={styles.fileChipName} numberOfLines={1}>
-                    {f.name}
-                  </Text>
-                  <Text style={styles.fileChipSize}>{Math.round(f.size / 1024)} KB</Text>
-                  <Pressable
-                    onPress={() => removeFile(idx)}
-                    hitSlop={6}
-                    style={({ pressed }) => pressed && styles.pressed}
-                  >
-                    <Ionicons name="close" size={16} color={colors.danger} />
-                  </Pressable>
-                </View>
-              ))}
+          <View style={styles.fileCard}>
+            <View style={styles.fileCardLeft}>
+              <Ionicons
+                name={
+                  (newFile ?? currentDoc).mimeType?.startsWith("image/")
+                    ? "image-outline"
+                    : "document-outline"
+                }
+                size={20}
+                color={colors.textMuted}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fileCardName} numberOfLines={1}>
+                  {newFile?.name ?? currentDoc.fileName}
+                </Text>
+                <Text style={styles.fileCardMeta}>
+                  {newFile
+                    ? `${Math.round(newFile.size / 1024)} KB · ${t("documents.fileReplacedNote")}`
+                    : `${Math.round(currentDoc.fileSize / 1024)} KB · ${currentDoc.mimeType}`}
+                </Text>
+              </View>
             </View>
-          )}
+            <Pressable
+              onPress={pickNewFile}
+              style={({ pressed }) => [styles.replaceBtn, pressed && styles.pressed]}
+            >
+              <Ionicons name="swap-horizontal" size={14} color={colors.bg} />
+              <Text style={styles.replaceBtnText}>
+                {t("documents.actions.replaceFile")}
+              </Text>
+            </Pressable>
+          </View>
 
           <Field label={t("documents.fields.documentType")}>
             <Pressable
@@ -263,7 +264,6 @@ export default function CreateDocumentScreen() {
                 setShowClinicSuggestions(true);
               }}
               onFocus={() => setShowClinicSuggestions(true)}
-              placeholder=""
               style={styles.input}
               maxLength={200}
             />
@@ -293,7 +293,7 @@ export default function CreateDocumentScreen() {
             >
               <Ionicons name="calendar-outline" size={18} color={colors.primary} />
               <Text style={styles.inputValue}>
-                {formatDateLong(`${studyYMD}T00:00:00`)}
+                {studyYMD ? formatDateLong(`${studyYMD}T00:00:00`) : ""}
               </Text>
               <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
             </Pressable>
@@ -303,7 +303,6 @@ export default function CreateDocumentScreen() {
             <TextInput
               value={notes}
               onChangeText={setNotes}
-              placeholder=""
               style={[styles.input, styles.textArea]}
               multiline
               maxLength={2000}
@@ -312,17 +311,10 @@ export default function CreateDocumentScreen() {
           </Field>
 
           <Button
-            label={
-              mutation.isPending && files.length > 1
-                ? t("documents.uploadingProgress", {
-                    done: uploadedCount,
-                    total: files.length,
-                  })
-                : t("documents.actions.save")
-            }
-            onPress={() => mutation.mutate()}
+            label={t("documents.actions.save")}
+            onPress={() => saveMutation.mutate()}
             disabled={!canSave}
-            loading={mutation.isPending}
+            loading={saveMutation.isPending}
             style={{ marginTop: spacing.lg }}
           />
         </ScrollView>
@@ -360,7 +352,7 @@ export default function CreateDocumentScreen() {
           <Pressable style={styles.modalCard} onPress={() => {}}>
             <Text style={styles.modalTitle}>{t("documents.fields.studyDate")}</Text>
             <MonthCalendar
-              value={studyYMD}
+              value={studyYMD || new Date().toISOString().slice(0, 10)}
               onChange={(d) => {
                 setStudyYMD(d);
                 setShowCalendar(false);
@@ -406,40 +398,36 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.7 },
 
   content: { padding: spacing.xl, gap: spacing.lg, paddingBottom: spacing.xxl * 2 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
 
-  filePicker: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: "dashed",
-    borderRadius: radius.lg,
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-  },
-  filePickerTitle: { color: colors.text, fontSize: fontSize.md, fontWeight: "700" },
-  filePickerMeta: {
-    color: colors.textMuted,
-    fontSize: fontSize.sm,
-    textAlign: "center",
-  },
-
-  fileList: { gap: spacing.xs },
-  fileChip: {
+  fileCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.surfaceElevated,
+    gap: spacing.md,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  fileCardLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  fileCardName: { color: colors.text, fontSize: fontSize.sm, fontWeight: "700" },
+  fileCardMeta: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: 2 },
+  replaceBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
   },
-  fileChipName: { flex: 1, color: colors.text, fontSize: fontSize.sm, fontWeight: "600" },
-  fileChipSize: { color: colors.textMuted, fontSize: fontSize.xs },
+  replaceBtnText: { color: colors.bg, fontSize: fontSize.xs, fontWeight: "700" },
 
   field: { gap: spacing.xs + 2 },
   fieldLabel: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "600" },

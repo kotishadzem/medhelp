@@ -166,15 +166,22 @@
     },
     "actions": {
       "pickFile": "ფაილის არჩევა",
+      "pickFiles": "ფაილების არჩევა",
       "pickPdf": "PDF-ის არჩევა",
       "pickPhoto": "ფოტოს არჩევა",
       "takePhoto": "ფოტოს გადაღება",
       "openFile": "ფაილის გახსნა",
+      "replaceFile": "ფაილის ჩანაცვლება",
       "save": "შენახვა",
       "edit": "რედაქტირება",
       "delete": "წაშლა",
       "cancel": "გაუქმება"
     },
+    "editTitle": "დოკუმენტის რედაქტირება",
+    "selectedFilesCount": "არჩეულია {{count}} ფაილი",
+    "uploadingProgress": "ატვირთვა: {{done}} / {{total}}",
+    "multipleFilesHint": "შეგიძლია რამდენიმე ფაილი ერთად ატვირთო — ყველა იგივე მონაცემებით შეინახება.",
+    "fileReplacedNote": "ფაილი ჩანაცვლდება ახლით",
     "type": {
       "FORM_100": "ფორმა 100",
       "PRESCRIPTION": "რეცეპტი / დანიშნულება",

@@ -178,6 +178,12 @@ export const documentsApi = {
       body: formData,
     }),
 
+  replaceFile: (id: string, formData: FormData) =>
+    apiRequest<{ document: MedicalDocument }>(`/documents/${id}/file`, {
+      method: "POST",
+      body: formData,
+    }),
+
   update: (id: string, patch: Partial<DocumentMetadataInput>) =>
     apiRequest<{ document: MedicalDocument }>(`/documents/${id}`, {
       method: "PATCH",

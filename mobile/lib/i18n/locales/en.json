@@ -166,15 +166,22 @@
     },
     "actions": {
       "pickFile": "Pick a file",
+      "pickFiles": "Pick files",
       "pickPdf": "Pick PDF",
       "pickPhoto": "Pick a photo",
       "takePhoto": "Take a photo",
       "openFile": "Open file",
+      "replaceFile": "Replace file",
       "save": "Save",
       "edit": "Edit",
       "delete": "Delete",
       "cancel": "Cancel"
     },
+    "editTitle": "Edit document",
+    "selectedFilesCount": "{{count}} file(s) selected",
+    "uploadingProgress": "Uploading: {{done}} / {{total}}",
+    "multipleFilesHint": "You can upload multiple files at once — they will all share the same metadata.",
+    "fileReplacedNote": "The file will be replaced with the new one",
     "type": {
       "FORM_100": "Form 100",
       "PRESCRIPTION": "Prescription",

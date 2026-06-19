@@ -395,6 +395,51 @@ def main() -> int:
         and r.get("error", {}).get("code") == "VALIDATION_ERROR",
     )
 
+    # ---- File replace ----
+    print("\n--- File replace (POST /api/documents/[id]/file) ---")
+    new_payload = b"%PDF-1.4\nREPLACED-content-much-longer-than-original\n%%EOF\n"
+    new_pdf = tmp / "replacement.pdf"
+    new_pdf.write_bytes(new_payload)
+    old_storage = doc3["storagePath"].replace("\\", "/")
+    repl = requests.post(
+        f"{BASE}/documents/{doc3['id']}/file",
+        headers=headers(token_a),
+        files={"file": (new_pdf.name, new_pdf.read_bytes(), "application/pdf")},
+        timeout=15,
+    ).json()
+    check("file replace succeeds", repl.get("success") is True, json.dumps(repl)[:200])
+    new_storage = repl["data"]["document"]["storagePath"].replace("\\", "/")
+    check("storagePath changed", new_storage != old_storage)
+    check(
+        "fileName + size reflect new file",
+        repl["data"]["document"]["fileName"] == new_pdf.name
+        and repl["data"]["document"]["fileSize"] == len(new_payload),
+    )
+    check("old file removed from disk", not (UPLOADS_ROOT / old_storage).exists())
+    check("new file present on disk", (UPLOADS_ROOT / new_storage).is_file())
+    dl = requests.get(
+        f"{BASE}/documents/{doc3['id']}/file", headers=headers(token_a)
+    )
+    check("GET file now returns replaced bytes", dl.content == new_payload)
+    # User B should not be able to replace
+    hijack = requests.post(
+        f"{BASE}/documents/{doc3['id']}/file",
+        headers=headers(token_b),
+        files={"file": (new_pdf.name, new_pdf.read_bytes(), "application/pdf")},
+    ).json()
+    check("user B replace -> 404", hijack.get("success") is False)
+    # Bad mime replace
+    bad = requests.post(
+        f"{BASE}/documents/{doc3['id']}/file",
+        headers=headers(token_a),
+        files={"file": ("x.txt", b"hi", "text/plain")},
+    ).json()
+    check(
+        "replace with bad mime -> validation error",
+        bad.get("success") is False
+        and bad.get("error", {}).get("code") == "VALIDATION_ERROR",
+    )
+
     # ---- DELETE + on-disk file cleanup ----
     print("\n--- DELETE + on-disk cleanup ---")
     storage_path = doc2["storagePath"].replace("\\", "/")
