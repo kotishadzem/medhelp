@@ -11,10 +11,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const days = Math.min(7, Math.max(1, Number(searchParams.get("days") ?? "1")));
 
+    // Window boundaries are UTC midnights — `scheduledAt` is stored as
+    // wall-clock UTC by the create route, so the comparison stays consistent
+    // regardless of the server-process timezone.
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfDay = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    );
     const endOfWindow = new Date(startOfDay);
-    endOfWindow.setDate(endOfWindow.getDate() + days);
+    endOfWindow.setUTCDate(endOfWindow.getUTCDate() + days);
 
     const intakes = await prisma.medicationIntake.findMany({
       where: {
@@ -36,9 +41,9 @@ export async function GET(request: NextRequest) {
       orderBy: { scheduledAt: "asc" },
     });
 
-    const yyyy = startOfDay.getFullYear();
-    const mm = String(startOfDay.getMonth() + 1).padStart(2, "0");
-    const dd = String(startOfDay.getDate()).padStart(2, "0");
+    const yyyy = startOfDay.getUTCFullYear();
+    const mm = String(startOfDay.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(startOfDay.getUTCDate()).padStart(2, "0");
     return success({ date: `${yyyy}-${mm}-${dd}`, days, intakes });
   } catch {
     return error("Internal server error", 500);

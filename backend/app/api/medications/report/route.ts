@@ -25,10 +25,10 @@ export async function GET(request: NextRequest) {
       return validationError("Invalid date range");
     }
     const endExclusive = new Date(to);
-    endExclusive.setDate(endExclusive.getDate() + 1);
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
 
     const days: string[] = [];
-    for (let d = new Date(from); d < endExclusive; d.setDate(d.getDate() + 1)) {
+    for (let d = new Date(from); d < endExclusive; d.setUTCDate(d.getUTCDate() + 1)) {
       days.push(toYMD(d));
     }
 
@@ -70,13 +70,13 @@ export async function GET(request: NextRequest) {
 function parseYMD(s: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   if (!m) return null;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
   return isNaN(d.getTime()) ? null : d;
 }
 
 function toYMD(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
 }

@@ -102,7 +102,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Generate intake records for each day × each time
+    // Generate intake records. The user's typed "HH:MM" is a wall-clock
+    // intention ("take your 8am pill") and must survive regardless of the
+    // server process timezone or DST. We store it as that literal time in
+    // UTC; the mobile client reads it back via getUTCHours/getUTCMinutes.
     const intakes: { medicationId: string; scheduledAt: Date }[] = [];
     const current = new Date(startDate);
     const end = new Date(intakeEnd);
@@ -111,10 +114,10 @@ export async function POST(request: NextRequest) {
       for (const time of timesOfDay) {
         const [hours, minutes] = time.split(":").map(Number);
         const scheduledAt = new Date(current);
-        scheduledAt.setHours(hours, minutes, 0, 0);
+        scheduledAt.setUTCHours(hours, minutes, 0, 0);
         intakes.push({ medicationId: medication.id, scheduledAt });
       }
-      current.setDate(current.getDate() + 1);
+      current.setUTCDate(current.getUTCDate() + 1);
     }
 
     if (intakes.length > 0) {

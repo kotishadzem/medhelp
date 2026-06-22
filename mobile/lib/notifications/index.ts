@@ -89,7 +89,20 @@ export async function scheduleForMedication(
   for (const intake of intakes) {
     if (map[intake.id]) continue; // already scheduled
     if (intake.status !== "PENDING") continue;
-    const at = new Date(intake.scheduledAt).getTime();
+    // scheduledAt is stored as wall-clock UTC ("08:00" -> 08:00Z). The OS
+    // needs an absolute epoch that means "the user's local 08:00", so we
+    // re-interpret the UTC components as a local-time Date.
+    const s = new Date(intake.scheduledAt);
+    const localAt = new Date(
+      s.getUTCFullYear(),
+      s.getUTCMonth(),
+      s.getUTCDate(),
+      s.getUTCHours(),
+      s.getUTCMinutes(),
+      0,
+      0
+    );
+    const at = localAt.getTime();
     if (at <= now) continue;
 
     const entry: { warn?: string; due?: string } = {};
@@ -132,7 +145,7 @@ export async function scheduleForMedication(
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: new Date(intake.scheduledAt),
+          date: localAt,
           channelId,
         },
       });

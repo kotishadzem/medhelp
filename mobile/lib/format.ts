@@ -51,9 +51,12 @@ function localeFor(lang: string): string {
   return "ka-GE";
 }
 
+// Intake scheduledAt is stored as wall-clock UTC by the backend — read it
+// the same way so a "08:00" pill always shows as 08:00 regardless of where
+// the user or the server is.
 export function formatTimeHHMM(iso: string): string {
   const d = new Date(iso);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 }
 
 export function formatDateLong(iso: string): string {
@@ -98,14 +101,14 @@ export function isToday(iso: string): boolean {
   const d = new Date(iso);
   const now = new Date();
   return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
+    d.getUTCFullYear() === now.getUTCFullYear() &&
+    d.getUTCMonth() === now.getUTCMonth() &&
+    d.getUTCDate() === now.getUTCDate()
   );
 }
 
 export function timePeriod(iso: string): "morning" | "afternoon" | "evening" {
-  const h = new Date(iso).getHours();
+  const h = new Date(iso).getUTCHours();
   if (h < 12) return "morning";
   if (h < 18) return "afternoon";
   return "evening";
@@ -113,17 +116,17 @@ export function timePeriod(iso: string): "morning" | "afternoon" | "evening" {
 
 export function ymdLocal(iso: string): string {
   const d = new Date(iso);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
 }
 
 export function isTomorrow(iso: string): boolean {
   const d = new Date(iso);
   const t = new Date();
-  t.setDate(t.getDate() + 1);
+  t.setUTCDate(t.getUTCDate() + 1);
   return (
-    d.getFullYear() === t.getFullYear() &&
-    d.getMonth() === t.getMonth() &&
-    d.getDate() === t.getDate()
+    d.getUTCFullYear() === t.getUTCFullYear() &&
+    d.getUTCMonth() === t.getUTCMonth() &&
+    d.getUTCDate() === t.getUTCDate()
   );
 }
 
@@ -134,6 +137,22 @@ export type DerivedIntakeStatus =
   | "IMMINENT" // PENDING within the next 30 minutes
   | "PENDING";
 
+function nowAsWallClockUtc(now: number): number {
+  // Convert the user's local wall-clock into a UTC epoch so we can compare
+  // against `scheduledAt` (which is stored as wall-clock UTC). Without this,
+  // a user-typed "08:00 pill" would flip to MISSED 4h late in Tbilisi.
+  const d = new Date(now);
+  return Date.UTC(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate(),
+    d.getHours(),
+    d.getMinutes(),
+    d.getSeconds(),
+    d.getMilliseconds()
+  );
+}
+
 export function deriveIntakeStatus(
   status: "PENDING" | "TAKEN" | "MISSED" | "SKIPPED",
   scheduledAt: string,
@@ -143,8 +162,9 @@ export function deriveIntakeStatus(
   if (status === "SKIPPED") return "SKIPPED";
   if (status === "MISSED") return "MISSED";
   const scheduled = new Date(scheduledAt).getTime();
-  if (scheduled < now) return "MISSED";
-  if (scheduled - now <= 30 * 60 * 1000) return "IMMINENT";
+  const localNow = nowAsWallClockUtc(now);
+  if (scheduled < localNow) return "MISSED";
+  if (scheduled - localNow <= 30 * 60 * 1000) return "IMMINENT";
   return "PENDING";
 }
 
