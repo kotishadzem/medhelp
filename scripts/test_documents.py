@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -537,6 +538,144 @@ def main() -> int:
 
     r = list_docs(token_a)
     check("list now has 2 docs", r["success"] and len(r["data"]["documents"]) == 2)
+
+    # ---- Share bundle (multi-doc + TTL) ----
+    print("\n--- Share bundles + TTL ---")
+    # Re-upload three docs so we have something to bundle.
+    bundle_docs = []
+    for i, name in enumerate(["sh-a.pdf", "sh-b.pdf"]):
+        p = tmp / name
+        p.write_bytes(pdf_path.read_bytes() + str(i).encode())
+        r = upload(
+            token_a,
+            p,
+            "application/pdf",
+            document_type="LAB_ANALYSIS",
+            custom_type=f"Bundle {i}",
+            clinic="Bundle Clinic",
+            study_date="2026-05-10T00:00:00.000Z",
+        )
+        bundle_docs.append(r["data"]["document"])
+
+    bundle_ids = [d["id"] for d in bundle_docs]
+    share = requests.post(
+        f"{BASE}/documents/share",
+        headers={**headers(token_a), "Content-Type": "application/json"},
+        data=json.dumps({"documentIds": bundle_ids, "ttlHours": 1}),
+    ).json()
+    check("multi-doc share create succeeds", share.get("success") is True, json.dumps(share)[:200])
+    bundle_token = share["data"]["share"]["token"]
+    expires_iso = share["data"]["share"]["expiresAt"]
+    expires_ts = datetime.fromisoformat(expires_iso.replace("Z", "+00:00"))
+    delta_min = (expires_ts - datetime.now(timezone.utc)).total_seconds() / 60
+    check(
+        "TTL=1h => expiresAt about 60 min from now",
+        50 <= delta_min <= 70,
+        f"delta={delta_min:.1f}min",
+    )
+    check(
+        "documentCount reflects bundle size",
+        share["data"]["share"]["documentCount"] == len(bundle_ids),
+    )
+
+    pub = requests.get(f"{BASE}/share/{bundle_token}").json()
+    check("public GET returns 2 documents", len(pub["data"]["documents"]) == 2)
+    check(
+        "public payload does NOT leak userId",
+        "userId" not in pub["data"]["documents"][0],
+    )
+
+    # Per-file streaming: any file inside the bundle is reachable.
+    for doc in pub["data"]["documents"]:
+        for f in doc["files"]:
+            r = requests.get(f"{BASE}/share/{bundle_token}/files/{f['id']}")
+            check(
+                f"bundle file {f['fileName']} streams 200",
+                r.status_code == 200 and len(r.content) > 0,
+            )
+
+    # Cross-bundle isolation: file from a non-bundled doc must NOT stream
+    # via this share token.
+    rogue_file_id = doc1["files"][0]["id"]
+    rogue = requests.get(f"{BASE}/share/{bundle_token}/files/{rogue_file_id}").json()
+    check("non-bundled file via this share -> 404", rogue.get("success") is False)
+
+    # Bad TTL
+    for bad_ttl, label in [(0, "zero"), (-1, "negative"), (99999, "way too big")]:
+        r = requests.post(
+            f"{BASE}/documents/share",
+            headers={**headers(token_a), "Content-Type": "application/json"},
+            data=json.dumps({"documentIds": bundle_ids, "ttlHours": bad_ttl}),
+        ).json()
+        check(
+            f"TTL {label} rejected",
+            r.get("success") is False
+            and r.get("error", {}).get("code") == "VALIDATION_ERROR",
+        )
+
+    # Empty documentIds
+    empty = requests.post(
+        f"{BASE}/documents/share",
+        headers={**headers(token_a), "Content-Type": "application/json"},
+        data=json.dumps({"documentIds": [], "ttlHours": 24}),
+    ).json()
+    check("empty documentIds rejected", empty.get("success") is False)
+
+    # Documents auth: user B cannot include user A's docs in a share.
+    hijack = requests.post(
+        f"{BASE}/documents/share",
+        headers={**headers(token_b), "Content-Type": "application/json"},
+        data=json.dumps({"documentIds": bundle_ids, "ttlHours": 24}),
+    ).json()
+    check(
+        "user B cannot bundle user A's docs",
+        hijack.get("success") is False,
+    )
+
+    # Legacy per-doc share endpoint still works and honours ttlHours.
+    legacy = requests.post(
+        f"{BASE}/documents/{bundle_ids[0]}/share",
+        headers={**headers(token_a), "Content-Type": "application/json"},
+        data=json.dumps({"ttlHours": 6}),
+    ).json()
+    check("legacy per-doc share with ttlHours=6", legacy.get("success") is True)
+    legacy_delta = (
+        datetime.fromisoformat(legacy["data"]["share"]["expiresAt"].replace("Z", "+00:00"))
+        - datetime.now(timezone.utc)
+    ).total_seconds() / 3600
+    check(
+        "legacy share expires ~6 hours from now",
+        5.5 <= legacy_delta <= 6.5,
+        f"delta={legacy_delta:.2f}h",
+    )
+
+    # Manually expire the bundle and verify both endpoints reject it.
+    import subprocess
+    subprocess.run(
+        [
+            "docker", "exec", "medhelp-postgres", "psql", "-U", "medhelp", "-d", "medhelp",
+            "-c",
+            f"UPDATE document_shares SET \"expiresAt\" = NOW() - INTERVAL '1 hour' "
+            f"WHERE token='{bundle_token}';",
+        ],
+        capture_output=True,
+    )
+    exp_meta = requests.get(f"{BASE}/share/{bundle_token}").json()
+    check("expired share GET -> 404", exp_meta.get("success") is False)
+    exp_file = requests.get(
+        f"{BASE}/share/{bundle_token}/files/{bundle_docs[0]['files'][0]['id']}"
+    )
+    # The file route returns JSON only on the error path; on success it streams
+    # binary. So an "expired" rejection here means a 4xx + JSON envelope.
+    try:
+        body = exp_file.json()
+        ok = body.get("success") is False
+    except ValueError:
+        ok = False
+    check("expired share file -> 404", ok and exp_file.status_code >= 400)
+
+    for d in bundle_docs:
+        requests.delete(f"{BASE}/documents/{d['id']}", headers=headers(token_a))
 
     # ---- final list to clean up the test data ----
     for doc in [doc1, doc3]:
