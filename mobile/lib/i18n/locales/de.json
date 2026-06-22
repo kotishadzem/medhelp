@@ -200,7 +200,19 @@
     "share": {
       "action": "Teilen",
       "title": "Dokument teilen",
+      "bundleCount": "{{count}} Dokumente gebündelt",
+      "ttlLabel": "Link gültig für",
+      "ttl": {
+        "1h": "1 Stunde",
+        "6h": "6 Stunden",
+        "24h": "24 Stunden",
+        "7d": "7 Tage",
+        "30d": "30 Tage"
+      },
+      "createLink": "Link erstellen",
+      "creating": "Erstellt…",
       "hint": "Link gilt bis {{expires}}. Verschicke ihn über E-Mail, Telegram, WhatsApp oder SMS.",
+      "expiresOn": "Gültig bis {{date}}",
       "copyLink": "Link kopieren",
       "copied": "Kopiert",
       "viaEmail": "Per E-Mail senden",
@@ -209,6 +221,9 @@
       "emailSubject": "MedHelp: medizinisches Dokument",
       "emailBody": "Ich teile ein medizinisches Dokument mit dir — der Link ist aktiv und die Dateien sind verfügbar:",
       "createFailed": "Freigabelink konnte nicht erstellt werden",
+      "selectMode": "Auswählen",
+      "selectedCount": "{{count}} ausgewählt",
+      "shareSelected": "Teilen ({{count}})",
       "publicTitle": "Geteiltes Dokument",
       "publicExpired": "Dieser Link ist abgelaufen oder ungültig.",
       "publicFooter": "MedHelp · geteiltes Dokument"

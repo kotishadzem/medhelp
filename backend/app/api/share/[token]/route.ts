@@ -12,8 +12,13 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const share = await prisma.documentShare.findUnique({
       where: { token },
       include: {
-        document: {
-          include: { files: { orderBy: { uploadedAt: "asc" } } },
+        documents: {
+          include: {
+            document: {
+              include: { files: { orderBy: { uploadedAt: "asc" } } },
+            },
+          },
+          orderBy: { addedAt: "asc" },
         },
       },
     });
@@ -27,21 +32,21 @@ export async function GET(_request: NextRequest, { params }: Params) {
         token: share.token,
         expiresAt: share.expiresAt,
       },
-      document: {
-        id: share.document.id,
-        documentType: share.document.documentType,
-        customType: share.document.customType,
-        clinic: share.document.clinic,
-        studyDate: share.document.studyDate,
-        notes: share.document.notes,
-        uploadedAt: share.document.uploadedAt,
-        files: share.document.files.map((f) => ({
+      documents: share.documents.map(({ document: d }) => ({
+        id: d.id,
+        documentType: d.documentType,
+        customType: d.customType,
+        clinic: d.clinic,
+        studyDate: d.studyDate,
+        notes: d.notes,
+        uploadedAt: d.uploadedAt,
+        files: d.files.map((f) => ({
           id: f.id,
           fileName: f.fileName,
           mimeType: f.mimeType,
           fileSize: f.fileSize,
         })),
-      },
+      })),
     });
   } catch {
     return error("Internal server error", 500);

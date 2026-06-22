@@ -152,7 +152,7 @@ model MedicalDocument {
   notes        String?
   uploadedAt   DateTime              @default(now())
   files        MedicalDocumentFile[]
-  shares       DocumentShare[]
+  shares       DocumentShareDocument[]
 
   @@index([userId, studyDate(sort: Desc)])
   @@index([userId, clinic])
@@ -175,15 +175,25 @@ model MedicalDocumentFile {
 }
 
 model DocumentShare {
-  id          String          @id @default(cuid())
-  documentId  String
-  document    MedicalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  id          String                  @id @default(cuid())
   createdById String
-  createdBy   User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  token       String          @unique
+  createdBy   User                    @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  token       String                  @unique
   expiresAt   DateTime
-  createdAt   DateTime        @default(now())
+  createdAt   DateTime                @default(now())
+  documents   DocumentShareDocument[]
 
-  @@index([documentId])
   @@map("document_shares")
+}
+
+model DocumentShareDocument {
+  shareId    String
+  share      DocumentShare   @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  documentId String
+  document   MedicalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  addedAt    DateTime        @default(now())
+
+  @@id([shareId, documentId])
+  @@index([documentId])
+  @@map("document_share_documents")
 }

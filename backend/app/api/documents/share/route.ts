@@ -3,14 +3,11 @@ import crypto from "node:crypto";
 import { requireAuth } from "@/lib/auth";
 import { canAccessOwner } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
-import { error, notFound, success, validationError } from "@/lib/responses";
+import { error, success, validationError } from "@/lib/responses";
 import {
   DEFAULT_SHARE_TTL_HOURS,
-  MAX_SHARE_TTL_HOURS,
-  MIN_SHARE_TTL_HOURS,
+  createShareSchema,
 } from "@/lib/validators/documents";
-
-type Params = { params: Promise<{ id: string }> };
 
 const SHARE_TOKEN_BYTES = 32;
 
@@ -26,38 +23,51 @@ function buildShareUrl(request: NextRequest, token: string): string {
   return `${origin}/share/${token}`;
 }
 
-// Legacy per-document share endpoint. Kept so older mobile builds keep
-// working — accepts optional { ttlHours } in the body. New clients should
-// hit POST /api/documents/share with { documentIds, ttlHours }.
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest) {
   try {
     const { user, error: authError } = requireAuth(request);
     if (authError) return authError;
 
-    const { id } = await params;
-    const document = await prisma.medicalDocument.findUnique({ where: { id } });
-    if (!document) return notFound("Document not found");
-    const allowed = await canAccessOwner(user.userId, document.userId);
-    if (!allowed) return notFound("Document not found");
+    const body = await request.json().catch(() => null);
+    if (!body) return validationError("body is required");
+    const parsed = createShareSchema.safeParse({
+      ...body,
+      ttlHours: body.ttlHours ?? DEFAULT_SHARE_TTL_HOURS,
+    });
+    if (!parsed.success) {
+      return validationError(parsed.error.issues[0].message);
+    }
+    const { documentIds, ttlHours } = parsed.data;
 
-    const body = await request.json().catch(() => ({}));
-    const requested = Number.isFinite(body?.ttlHours)
-      ? Math.round(body.ttlHours)
-      : DEFAULT_SHARE_TTL_HOURS;
-    if (requested < MIN_SHARE_TTL_HOURS || requested > MAX_SHARE_TTL_HOURS) {
-      return validationError("Invalid TTL");
+    const uniqueIds = Array.from(new Set(documentIds));
+    const docs = await prisma.medicalDocument.findMany({
+      where: { id: { in: uniqueIds } },
+      select: { id: true, userId: true },
+    });
+    if (docs.length !== uniqueIds.length) {
+      return validationError("One or more documents not found");
+    }
+    for (const d of docs) {
+      const ok = await canAccessOwner(user.userId, d.userId);
+      if (!ok) {
+        return error(
+          "Not authorized to share one of these documents",
+          403,
+          "NOT_FAMILY"
+        );
+      }
     }
 
     const token = crypto.randomBytes(SHARE_TOKEN_BYTES).toString("hex");
     const expiresAt = new Date();
-    expiresAt.setUTCHours(expiresAt.getUTCHours() + requested);
+    expiresAt.setUTCHours(expiresAt.getUTCHours() + ttlHours);
 
     const share = await prisma.documentShare.create({
       data: {
         createdById: user.userId,
         token,
         expiresAt,
-        documents: { create: [{ documentId: document.id }] },
+        documents: { create: docs.map((d) => ({ documentId: d.id })) },
       },
     });
 
@@ -67,7 +77,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           id: share.id,
           token: share.token,
           expiresAt: share.expiresAt,
-          documentCount: 1,
+          documentCount: docs.length,
         },
         url: buildShareUrl(request, share.token),
       },

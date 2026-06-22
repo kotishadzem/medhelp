@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/Button";
 import { DocumentTypeIcon } from "@/components/DocumentTypeIcon";
 import { MonthCalendar } from "@/components/MonthCalendar";
+import { ShareModal } from "@/components/ShareModal";
 import { documentsApi } from "@/lib/api/endpoints";
 import { formatDateLong, formatDateShort, todayYMD } from "@/lib/format";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
@@ -53,6 +54,24 @@ export function DocumentsListView({ forUserId, onPressRow, onUpload }: Props) {
   const [showDatePicker, setShowDatePicker] = useState<DateMode | null>(null);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
 
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [shareIds, setShareIds] = useState<string[] | null>(null);
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelect = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+
   const params = useMemo(
     () => ({
       q: query.trim() || undefined,
@@ -87,6 +106,52 @@ export function DocumentsListView({ forUserId, onPressRow, onUpload }: Props) {
 
   return (
     <View style={styles.root}>
+      <View style={styles.selectRow}>
+        {selectMode ? (
+          <>
+            <Pressable
+              onPress={exitSelect}
+              style={({ pressed }) => [styles.selectAction, pressed && styles.pressed]}
+            >
+              <Ionicons name="close" size={14} color={colors.textMuted} />
+              <Text style={styles.selectActionText}>
+                {t("documents.actions.cancel")}
+              </Text>
+            </Pressable>
+            <Text style={styles.selectCount}>
+              {t("documents.share.selectedCount", { count: selected.size })}
+            </Text>
+            <Pressable
+              onPress={() => {
+                if (selected.size === 0) return;
+                setShareIds(Array.from(selected));
+              }}
+              disabled={selected.size === 0}
+              style={({ pressed }) => [
+                styles.shareCta,
+                selected.size === 0 && styles.disabled,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons name="share-social-outline" size={14} color={colors.bg} />
+              <Text style={styles.shareCtaText}>
+                {t("documents.share.shareSelected", { count: selected.size })}
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable
+            onPress={() => setSelectMode(true)}
+            style={({ pressed }) => [styles.selectAction, pressed && styles.pressed]}
+          >
+            <Ionicons name="checkmark-done-outline" size={14} color={colors.primary} />
+            <Text style={[styles.selectActionText, { color: colors.primary }]}>
+              {t("documents.share.selectMode")}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+
       <View style={styles.searchRow}>
         <Ionicons name="search" size={18} color={colors.textMuted} />
         <TextInput
@@ -170,7 +235,21 @@ export function DocumentsListView({ forUserId, onPressRow, onUpload }: Props) {
           keyExtractor={(d) => d.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <DocumentRow document={item} onPress={() => onPressRow(item)} />
+            <DocumentRow
+              document={item}
+              selectMode={selectMode}
+              checked={selected.has(item.id)}
+              onPress={() => {
+                if (selectMode) toggleSelect(item.id);
+                else onPressRow(item);
+              }}
+              onLongPress={() => {
+                if (!selectMode) {
+                  setSelectMode(true);
+                  toggleSelect(item.id);
+                }
+              }}
+            />
           )}
           refreshControl={
             <RefreshControl
@@ -207,6 +286,15 @@ export function DocumentsListView({ forUserId, onPressRow, onUpload }: Props) {
           if (showDatePicker === "from") setFromYMD(null);
           else setToYMD(null);
           setShowDatePicker(null);
+        }}
+      />
+
+      <ShareModal
+        visible={!!shareIds}
+        documentIds={shareIds ?? []}
+        onClose={() => {
+          setShareIds(null);
+          exitSelect();
         }}
       />
     </View>
@@ -270,17 +358,34 @@ function Chip({
 
 function DocumentRow({
   document,
+  selectMode,
+  checked,
   onPress,
+  onLongPress,
 }: {
   document: MedicalDocument;
+  selectMode: boolean;
+  checked: boolean;
   onPress: () => void;
+  onLongPress: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      onLongPress={onLongPress}
+      delayLongPress={400}
+      style={({ pressed }) => [
+        styles.row,
+        checked && styles.rowChecked,
+        pressed && styles.pressed,
+      ]}
     >
+      {selectMode && (
+        <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+          {checked && <Ionicons name="checkmark" size={14} color={colors.bg} />}
+        </View>
+      )}
       <DocumentTypeIcon type={document.documentType} size={48} />
       <View style={styles.rowMain}>
         <Text style={styles.rowTitle} numberOfLines={1}>
@@ -298,7 +403,9 @@ function DocumentRow({
           <Text style={styles.rowBadgeText}>{document.files.length}</Text>
         </View>
       )}
-      <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+      {!selectMode && (
+        <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+      )}
     </Pressable>
   );
 }
@@ -538,6 +645,47 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   rowBadgeText: { color: colors.primary, fontSize: fontSize.xs, fontWeight: "700" },
+  rowChecked: { borderColor: colors.primary, backgroundColor: colors.primary + "18" },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceElevated,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+
+  selectRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xs,
+  },
+  selectAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+  },
+  selectActionText: { color: colors.textMuted, fontSize: fontSize.sm, fontWeight: "700" },
+  selectCount: { color: colors.text, fontSize: fontSize.sm, fontWeight: "600" },
+  shareCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.pill,
+  },
+  shareCtaText: { color: colors.bg, fontSize: fontSize.sm, fontWeight: "800" },
+  disabled: { opacity: 0.45 },
 
   empty: { alignItems: "center", padding: spacing.xxl, gap: spacing.sm },
   emptyTitle: {

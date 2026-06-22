@@ -200,7 +200,19 @@
     "share": {
       "action": "Share",
       "title": "Share document",
+      "bundleCount": "{{count}} documents bundled",
+      "ttlLabel": "Link expires in",
+      "ttl": {
+        "1h": "1 hour",
+        "6h": "6 hours",
+        "24h": "24 hours",
+        "7d": "7 days",
+        "30d": "30 days"
+      },
+      "createLink": "Create link",
+      "creating": "Creating…",
       "hint": "Link works until {{expires}}. Send via any channel — email, Telegram, WhatsApp, SMS.",
+      "expiresOn": "Expires {{date}}",
       "copyLink": "Copy link",
       "copied": "Copied",
       "viaEmail": "Send via Email",
@@ -209,6 +221,9 @@
       "emailSubject": "MedHelp: medical document",
       "emailBody": "I'm sharing a medical document with you — the link is active and the files are attached:",
       "createFailed": "Could not create share link",
+      "selectMode": "Select",
+      "selectedCount": "{{count}} selected",
+      "shareSelected": "Share ({{count}})",
       "publicTitle": "Shared document",
       "publicExpired": "This link is expired or invalid.",
       "publicFooter": "MedHelp · Shared document"

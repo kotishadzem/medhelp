@@ -12,14 +12,16 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
     const share = await prisma.documentShare.findUnique({
       where: { token },
+      include: { documents: { select: { documentId: true } } },
     });
     if (!share) return notFound("Share not found");
     if (share.expiresAt.getTime() < Date.now()) {
       return notFound("Share has expired");
     }
+    const docIds = share.documents.map((d) => d.documentId);
 
     const file = await prisma.medicalDocumentFile.findFirst({
-      where: { id: fileId, documentId: share.documentId },
+      where: { id: fileId, documentId: { in: docIds } },
     });
     if (!file) return notFound("File not found");
 

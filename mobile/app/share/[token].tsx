@@ -52,7 +52,7 @@ export default function SharedDocumentScreen() {
     );
   }
 
-  const { document } = query.data;
+  const { documents, share } = query.data;
 
   const openFile = async (fileId: string) => {
     const url = documentsApi.publicShareFileUrl(token, fileId);
@@ -80,64 +80,77 @@ export default function SharedDocumentScreen() {
           </View>
         </View>
 
-        <View style={styles.summaryCard}>
-          <DocumentTypeIcon type={document.documentType} size={56} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.summaryTitle} numberOfLines={2}>
-              {document.customType?.trim()
-                ? document.customType
-                : t(`documents.type.${document.documentType}`)}
-            </Text>
-            <Text style={styles.summaryMeta} numberOfLines={1}>
-              {formatDateLong(document.studyDate)} · {document.clinic}
-            </Text>
-          </View>
+        <View style={styles.expiresPill}>
+          <Ionicons name="time-outline" size={14} color={colors.warning} />
+          <Text style={styles.expiresText}>
+            {t("documents.share.expiresOn", { date: formatDateLong(share.expiresAt) })}
+          </Text>
         </View>
 
-        {document.notes && (
-          <View style={styles.notesBox}>
-            <Text style={styles.notesText}>{document.notes}</Text>
-          </View>
-        )}
-
-        <Text style={styles.sectionLabel}>
-          {t("documents.attachedFiles")} ·{" "}
-          {t("documents.filesCount", { count: document.files.length })}
-        </Text>
-
-        <View style={styles.filesList}>
-          {document.files.map((f) => (
-            <View key={f.id} style={styles.fileCard}>
-              <View style={styles.fileCardPreview}>
-                {f.mimeType.startsWith("image/") ? (
-                  <Image
-                    source={{ uri: documentsApi.publicShareFileUrl(token, f.id) }}
-                    style={styles.thumb}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <DocumentTypeIcon type={document.documentType} size={64} />
-                )}
-              </View>
-              <View style={styles.fileCardBody}>
-                <Text style={styles.fileCardName} numberOfLines={2}>
-                  {f.fileName}
+        {documents.map((document) => (
+          <View key={document.id} style={styles.docBlock}>
+            <View style={styles.summaryCard}>
+              <DocumentTypeIcon type={document.documentType} size={56} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.summaryTitle} numberOfLines={2}>
+                  {document.customType?.trim()
+                    ? document.customType
+                    : t(`documents.type.${document.documentType}`)}
                 </Text>
-                <Text style={styles.fileCardMeta}>
-                  {Math.round(f.fileSize / 1024)} KB ·{" "}
-                  {f.mimeType.split("/")[1]?.toUpperCase()}
+                <Text style={styles.summaryMeta} numberOfLines={1}>
+                  {formatDateLong(document.studyDate)} · {document.clinic}
                 </Text>
-                <Pressable
-                  onPress={() => openFile(f.id)}
-                  style={({ pressed }) => [styles.openBtn, pressed && styles.pressed]}
-                >
-                  <Ionicons name="open-outline" size={14} color={colors.bg} />
-                  <Text style={styles.openBtnText}>{t("documents.actions.openFile")}</Text>
-                </Pressable>
               </View>
             </View>
-          ))}
-        </View>
+
+            {document.notes ? (
+              <View style={styles.notesBox}>
+                <Text style={styles.notesText}>{document.notes}</Text>
+              </View>
+            ) : null}
+
+            <Text style={styles.sectionLabel}>
+              {t("documents.attachedFiles")} ·{" "}
+              {t("documents.filesCount", { count: document.files.length })}
+            </Text>
+
+            <View style={styles.filesList}>
+              {document.files.map((f: { id: string; fileName: string; mimeType: string; fileSize: number }) => (
+                <View key={f.id} style={styles.fileCard}>
+                  <View style={styles.fileCardPreview}>
+                    {f.mimeType.startsWith("image/") ? (
+                      <Image
+                        source={{ uri: documentsApi.publicShareFileUrl(token, f.id) }}
+                        style={styles.thumb}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <DocumentTypeIcon type={document.documentType} size={64} />
+                    )}
+                  </View>
+                  <View style={styles.fileCardBody}>
+                    <Text style={styles.fileCardName} numberOfLines={2}>
+                      {f.fileName}
+                    </Text>
+                    <Text style={styles.fileCardMeta}>
+                      {Math.round(f.fileSize / 1024)} KB ·{" "}
+                      {f.mimeType.split("/")[1]?.toUpperCase()}
+                    </Text>
+                    <Pressable
+                      onPress={() => openFile(f.id)}
+                      style={({ pressed }) => [styles.openBtn, pressed && styles.pressed]}
+                    >
+                      <Ionicons name="open-outline" size={14} color={colors.bg} />
+                      <Text style={styles.openBtnText}>
+                        {t("documents.actions.openFile")}
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        ))}
 
         <Text style={styles.footer}>{t("documents.share.publicFooter")}</Text>
       </ScrollView>
@@ -150,6 +163,21 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.lg, paddingBottom: spacing.xxl * 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: spacing.md, padding: spacing.xl },
   errorText: { color: colors.danger, fontSize: fontSize.md, textAlign: "center" },
+
+  docBlock: { gap: spacing.md },
+  expiresPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    alignSelf: "flex-start",
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.warning + "55",
+    backgroundColor: colors.warning + "18",
+  },
+  expiresText: { color: colors.warning, fontSize: fontSize.xs, fontWeight: "700" },
 
   brandRow: {
     flexDirection: "row",

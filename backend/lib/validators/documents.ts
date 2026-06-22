@@ -43,3 +43,17 @@ export const listDocumentsQuerySchema = z.object({
 export type CreateDocumentMetadata = z.infer<typeof createDocumentMetadataSchema>;
 export type UpdateDocumentMetadata = z.infer<typeof updateDocumentSchema>;
 export type ListDocumentsQuery = z.infer<typeof listDocumentsQuerySchema>;
+
+export const MIN_SHARE_TTL_HOURS = 1;
+export const MAX_SHARE_TTL_HOURS = 24 * 30;
+export const DEFAULT_SHARE_TTL_HOURS = 24 * 7;
+
+export const createShareSchema = z.object({
+  documentIds: z.array(z.string().min(1)).min(1).max(100),
+  ttlHours: z
+    .number()
+    .int()
+    .min(MIN_SHARE_TTL_HOURS)
+    .max(MAX_SHARE_TTL_HOURS)
+    .default(DEFAULT_SHARE_TTL_HOURS),
+});

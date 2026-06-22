@@ -203,16 +203,24 @@ export const documentsApi = {
       `/documents/clinics${forUserId ? `?forUserId=${encodeURIComponent(forUserId)}` : ""}`
     ),
 
-  createShare: (id: string) =>
+  createShare: (documentIds: string[], ttlHours: number) =>
     apiRequest<{
-      share: { id: string; token: string; expiresAt: string };
+      share: {
+        id: string;
+        token: string;
+        expiresAt: string;
+        documentCount: number;
+      };
       url: string;
-    }>(`/documents/${id}/share`, { method: "POST" }),
+    }>(`/documents/share`, {
+      method: "POST",
+      body: { documentIds, ttlHours },
+    }),
 
   publicShare: (token: string) =>
     apiRequest<{
       share: { token: string; expiresAt: string };
-      document: Omit<MedicalDocument, "userId" | "forUserId">;
+      documents: Omit<MedicalDocument, "userId" | "forUserId">[];
     }>(`/share/${encodeURIComponent(token)}`, { auth: false }),
 
   publicShareFileUrl: (token: string, fileId: string) =>
