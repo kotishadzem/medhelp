@@ -13,7 +13,7 @@ export function ProfileButton() {
       style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
     >
       <View style={styles.inner}>
-        <Ionicons name="person-outline" size={20} color={colors.text} />
+        <Ionicons name="person" size={18} color={colors.primary} />
       </View>
     </Pressable>
   );
@@ -30,9 +30,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: radius.pill,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primary + "22",
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary + "55",
     alignItems: "center",
     justifyContent: "center",
   },
