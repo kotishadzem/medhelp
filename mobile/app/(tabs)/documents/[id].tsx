@@ -23,6 +23,10 @@ import { ShareModal } from "@/components/ShareModal";
 import { documentsApi } from "@/lib/api/endpoints";
 import { confirm } from "@/lib/confirm";
 import { formatDateLong } from "@/lib/format";
+import {
+  medNameFontSize,
+  useMedFontScale,
+} from "@/lib/settings/SettingsContext";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import type { MedicalDocumentFile } from "@/lib/types";
 
@@ -32,6 +36,7 @@ export default function DocumentDetailScreen() {
   const qc = useQueryClient();
   const params = useLocalSearchParams<{ id: string }>();
   const id = params.id;
+  const { medFontScale } = useMedFontScale();
 
   const documentQuery = useQuery({
     queryKey: ["documents", "detail", id],
@@ -136,7 +141,10 @@ export default function DocumentDetailScreen() {
         >
           <Ionicons name="chevron-back" size={22} color={colors.text} />
         </Pressable>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <Text
+          style={[styles.headerTitle, { fontSize: medNameFontSize(medFontScale) }]}
+          numberOfLines={1}
+        >
           {doc.customType?.trim() || t(`documents.type.${doc.documentType}`)}
         </Text>
         <View style={styles.headerActions}>

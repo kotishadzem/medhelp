@@ -20,6 +20,10 @@ import { MonthCalendar } from "@/components/MonthCalendar";
 import { ShareModal } from "@/components/ShareModal";
 import { documentsApi } from "@/lib/api/endpoints";
 import { formatDateLong, formatDateShort, todayYMD } from "@/lib/format";
+import {
+  medNameFontSize,
+  useMedFontScale,
+} from "@/lib/settings/SettingsContext";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 import type { DocumentType, MedicalDocument } from "@/lib/types";
 
@@ -370,6 +374,7 @@ function DocumentRow({
   onLongPress: () => void;
 }) {
   const { t } = useTranslation();
+  const { medFontScale } = useMedFontScale();
   return (
     <Pressable
       onPress={onPress}
@@ -388,7 +393,10 @@ function DocumentRow({
       )}
       <DocumentTypeIcon type={document.documentType} size={48} />
       <View style={styles.rowMain}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
+        <Text
+          style={[styles.rowTitle, { fontSize: medNameFontSize(medFontScale) }]}
+          numberOfLines={1}
+        >
           {document.customType?.trim()
             ? document.customType
             : t(`documents.type.${document.documentType}`)}

@@ -18,11 +18,16 @@ import * as WebBrowser from "expo-web-browser";
 import { DocumentTypeIcon } from "@/components/DocumentTypeIcon";
 import { documentsApi } from "@/lib/api/endpoints";
 import { formatDateLong } from "@/lib/format";
+import {
+  medNameFontSize,
+  useMedFontScale,
+} from "@/lib/settings/SettingsContext";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
 
 export default function SharedDocumentScreen() {
   const { t } = useTranslation();
   const { token } = useLocalSearchParams<{ token: string }>();
+  const { medFontScale } = useMedFontScale();
 
   const query = useQuery({
     queryKey: ["public-share", token],
@@ -105,7 +110,13 @@ export default function SharedDocumentScreen() {
             <View style={styles.summaryCard}>
               <DocumentTypeIcon type={document.documentType} size={56} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.summaryTitle} numberOfLines={2}>
+                <Text
+                  style={[
+                    styles.summaryTitle,
+                    { fontSize: medNameFontSize(medFontScale) },
+                  ]}
+                  numberOfLines={2}
+                >
                   {document.customType?.trim()
                     ? document.customType
                     : t(`documents.type.${document.documentType}`)}
