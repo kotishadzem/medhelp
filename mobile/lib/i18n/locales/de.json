@@ -78,7 +78,17 @@
     "medFontSize": "Medikamentenschrift",
     "medFontSizeValue": "Größe {{n}}",
     "medFontPreviewLabel": "Vorschau",
-    "medFontPreviewName": "Amoxicillin"
+    "medFontPreviewName": "Amoxicillin",
+    "theme": {
+      "label": "Design",
+      "hint": "Farbschema — wird sofort übernommen.",
+      "ocean": "Ozean",
+      "sunrise": "Sonnenaufgang",
+      "forest": "Wald",
+      "royal": "Königlich",
+      "midnight": "Mitternacht",
+      "light": "Hell"
+    }
   },
   "quickUnlockSettings": {
     "title": "Schnellanmeldung",

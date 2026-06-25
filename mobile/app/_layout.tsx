@@ -8,7 +8,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { queryClient } from "@/lib/queryClient";
 import { AuthProvider, useAuth } from "@/lib/auth/AuthContext";
-import { SettingsProvider } from "@/lib/settings/SettingsContext";
+import { SettingsProvider, useThemeSetting } from "@/lib/settings/SettingsContext";
 import { initI18n } from "@/lib/i18n";
 import { colors, fontSize, spacing } from "@/lib/theme";
 
@@ -24,15 +24,26 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <SettingsProvider>
-            <AuthProvider>
-              <StatusBar style="light" />
-              {i18nReady ? <RootNavigator /> : <SplashView />}
-            </AuthProvider>
+            <ThemeGate>
+              <AuthProvider>
+                <StatusBar style="light" />
+                {i18nReady ? <RootNavigator /> : <SplashView />}
+              </AuthProvider>
+            </ThemeGate>
           </SettingsProvider>
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+}
+
+// Holds the rest of the tree until the persisted theme has been resolved
+// and applied — otherwise the first paint flashes with the default
+// palette before swapping to the user's pick.
+function ThemeGate({ children }: { children: React.ReactNode }) {
+  const { themeReady } = useThemeSetting();
+  if (!themeReady) return <SplashView />;
+  return <>{children}</>;
 }
 
 function RootNavigator() {

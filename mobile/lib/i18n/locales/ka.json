@@ -78,7 +78,17 @@
     "medFontSize": "მედიკამენტის შრიფტი",
     "medFontSizeValue": "ზომა {{n}}",
     "medFontPreviewLabel": "გადახედვა",
-    "medFontPreviewName": "ამოქსიცილინი"
+    "medFontPreviewName": "ამოქსიცილინი",
+    "theme": {
+      "label": "თემა",
+      "hint": "ფერების სქემა — დაუყოვნებლივ გადაირთვება.",
+      "ocean": "ოკეანე",
+      "sunrise": "მზის ამოსვლა",
+      "forest": "ტყე",
+      "royal": "სამეფო",
+      "midnight": "შუაღამე",
+      "light": "ნათელი"
+    }
   },
   "quickUnlockSettings": {
     "title": "სწრაფი შესვლა",

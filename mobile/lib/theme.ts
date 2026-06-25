@@ -1,21 +1,17 @@
-export const colors = {
-  bg: "#0b1220",
-  surface: "#111a2e",
-  surfaceElevated: "#172242",
-  border: "#1f2b4d",
-  text: "#e7ecf3",
-  textMuted: "#8a94a8",
-  textDim: "#5d6781",
-  primary: "#0ea5e9",
-  primaryMuted: "#1e3a5f",
-  success: "#22c55e",
-  warning: "#f59e0b",
-  danger: "#ef4444",
-  taken: "#22c55e",
-  missed: "#ef4444",
-  skipped: "#8a94a8",
-  pending: "#f59e0b",
-};
+import { DEFAULT_THEME_NAME, THEMES, type Colors, type ThemeName } from "./theme/themes";
+
+// The `colors` object is the single source consumed by every existing
+// StyleSheet.create() across the codebase. We deliberately keep it as a
+// mutable singleton: when the user switches theme, we copy the preset's
+// values onto this same object reference and re-mount the navigator (via
+// a key on the root) so StyleSheets recompute with the new colors. That
+// avoids touching the 30+ files that currently `import { colors }`.
+export const colors: Colors = { ...THEMES[DEFAULT_THEME_NAME].colors };
+
+export function applyTheme(name: ThemeName): void {
+  const preset = THEMES[name] ?? THEMES[DEFAULT_THEME_NAME];
+  Object.assign(colors, preset.colors);
+}
 
 export const spacing = {
   xs: 4,
@@ -42,3 +38,5 @@ export const fontSize = {
   xxl: 28,
   display: 34,
 };
+
+export type { Colors, ThemeName };

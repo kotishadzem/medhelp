@@ -8,8 +8,15 @@ import {
   useState,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { applyTheme } from "@/lib/theme";
+import {
+  DEFAULT_THEME_NAME,
+  isThemeName,
+  type ThemeName,
+} from "@/lib/theme/themes";
 
 const KEY_MED_FONT = "medhelp.settings.medFontScale";
+const KEY_THEME = "medhelp.settings.themeName";
 
 export const MED_FONT_MIN = 1;
 export const MED_FONT_MAX = 7;
@@ -27,23 +34,39 @@ export function medNameFontSize(scale: number): number {
 type SettingsContextValue = {
   medFontScale: number;
   setMedFontScale: (n: number) => Promise<void>;
+  themeName: ThemeName;
+  setThemeName: (name: ThemeName) => Promise<void>;
+  themeReady: boolean;
 };
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [scale, setScale] = useState(MED_FONT_DEFAULT);
+  const [themeName, setThemeNameState] = useState<ThemeName>(DEFAULT_THEME_NAME);
+  const [themeReady, setThemeReady] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(KEY_MED_FONT);
-        if (raw) {
-          const n = Number(raw);
+        const [rawFont, rawTheme] = await Promise.all([
+          AsyncStorage.getItem(KEY_MED_FONT),
+          AsyncStorage.getItem(KEY_THEME),
+        ]);
+        if (rawFont) {
+          const n = Number(rawFont);
           if (n >= MED_FONT_MIN && n <= MED_FONT_MAX) setScale(n);
         }
+        if (rawTheme && isThemeName(rawTheme)) {
+          applyTheme(rawTheme);
+          setThemeNameState(rawTheme);
+        } else {
+          applyTheme(DEFAULT_THEME_NAME);
+        }
       } catch {
-        // ignore
+        applyTheme(DEFAULT_THEME_NAME);
+      } finally {
+        setThemeReady(true);
       }
     })();
   }, []);
@@ -58,9 +81,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setThemeName = useCallback(async (name: ThemeName) => {
+    applyTheme(name);
+    setThemeNameState(name);
+    try {
+      await AsyncStorage.setItem(KEY_THEME, name);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const value = useMemo<SettingsContextValue>(
-    () => ({ medFontScale: scale, setMedFontScale }),
-    [scale, setMedFontScale]
+    () => ({
+      medFontScale: scale,
+      setMedFontScale,
+      themeName,
+      setThemeName,
+      themeReady,
+    }),
+    [scale, setMedFontScale, themeName, setThemeName, themeReady]
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
@@ -69,5 +108,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 export function useMedFontScale(): SettingsContextValue {
   const ctx = useContext(SettingsContext);
   if (!ctx) throw new Error("useMedFontScale must be used within <SettingsProvider>");
+  return ctx;
+}
+
+export function useThemeSetting(): SettingsContextValue {
+  const ctx = useContext(SettingsContext);
+  if (!ctx) throw new Error("useThemeSetting must be used within <SettingsProvider>");
   return ctx;
 }

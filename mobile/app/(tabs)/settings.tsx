@@ -27,6 +27,7 @@ import {
   useMedFontScale,
 } from "@/lib/settings/SettingsContext";
 import { colors, fontSize, radius, spacing } from "@/lib/theme";
+import { THEME_NAMES, THEMES, type ThemeName } from "@/lib/theme/themes";
 
 const FLAG: Record<Language, string> = { ka: "🇬🇪", en: "🇬🇧", de: "🇩🇪" };
 const NATIVE_NAMES: Record<Language, string> = {
@@ -45,7 +46,8 @@ export default function Settings() {
   const [lastName, setLastName] = useState(user?.lastName ?? "");
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showFontPicker, setShowFontPicker] = useState(false);
-  const { medFontScale, setMedFontScale } = useMedFontScale();
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const { medFontScale, setMedFontScale, themeName, setThemeName } = useMedFontScale();
 
   const save = useMutation({
     mutationFn: () =>
@@ -155,6 +157,22 @@ export default function Settings() {
             sublabel={t("settings.medFontSizeValue", { n: medFontScale })}
             onPress={() => setShowFontPicker(true)}
           />
+
+          <Row
+            icon="color-palette-outline"
+            label={t("settings.theme.label")}
+            right={
+              <View style={styles.themePreviewRow}>
+                <Swatch color={THEMES[themeName].colors.bg} />
+                <Swatch color={THEMES[themeName].colors.surface} />
+                <Swatch color={THEMES[themeName].colors.primary} />
+                <Text style={[styles.rowValue, { marginLeft: spacing.sm }]}>
+                  {t(THEMES[themeName].labelKey)}
+                </Text>
+              </View>
+            }
+            onPress={() => setShowThemePicker(true)}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -215,6 +233,60 @@ export default function Settings() {
       </Modal>
 
       <Modal
+        visible={showThemePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowThemePicker(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowThemePicker(false)}>
+          <Pressable style={styles.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>{t("settings.theme.label")}</Text>
+            <Text style={styles.themeHint}>{t("settings.theme.hint")}</Text>
+            {THEME_NAMES.map((name) => {
+              const preset = THEMES[name];
+              const active = name === themeName;
+              return (
+                <Pressable
+                  key={name}
+                  onPress={async () => {
+                    await setThemeName(name);
+                    setShowThemePicker(false);
+                    // Force the navigator to re-evaluate StyleSheets with the new
+                    // palette. Without this, color tokens captured at module
+                    // load time stay frozen.
+                    if (Platform.OS === "web" && typeof window !== "undefined") {
+                      window.location.reload();
+                    }
+                  }}
+                  style={({ pressed }) => [
+                    styles.themeRow,
+                    active && styles.themeRowActive,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <View style={styles.themeSwatchRow}>
+                    <Swatch color={preset.colors.bg} large />
+                    <Swatch color={preset.colors.surface} large />
+                    <Swatch color={preset.colors.primary} large />
+                    <Swatch color={preset.colors.text} large />
+                  </View>
+                  <Text style={styles.themeRowName}>{t(preset.labelKey)}</Text>
+                  {active && (
+                    <Ionicons
+                      name="checkmark"
+                      size={20}
+                      color={colors.primary}
+                      style={{ marginLeft: "auto" }}
+                    />
+                  )}
+                </Pressable>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
         visible={showLangPicker}
         transparent
         animationType="fade"
@@ -268,6 +340,22 @@ function quickStatusLabel(
   if (s.faceEnabled) labels.push(t("quickUnlockSettings.bioFace"));
   if (labels.length === 0) return t("quickUnlockSettings.bioOff");
   return labels.join(" · ");
+}
+
+function Swatch({ color, large }: { color: string; large?: boolean }) {
+  const size = large ? 22 : 14;
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: color,
+        borderWidth: 1,
+        borderColor: colors.border,
+      }}
+    />
+  );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -441,4 +529,24 @@ const styles = StyleSheet.create({
   },
   fontPreviewName: { color: colors.text, fontWeight: "700" },
   fontPreviewMeta: { color: colors.textMuted, fontSize: fontSize.sm },
+
+  themePreviewRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  themeHint: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    paddingBottom: spacing.sm,
+  },
+  themeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    padding: spacing.md,
+    backgroundColor: colors.bg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  themeRowActive: { borderColor: colors.primary },
+  themeRowName: { color: colors.text, fontSize: fontSize.md, fontWeight: "700" },
+  themeSwatchRow: { flexDirection: "row", gap: 4 },
 });
