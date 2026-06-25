@@ -266,6 +266,9 @@
     "undoBody": "Mark {{name}} as not taken?",
     "undoConfirm": "Yes, undo",
     "undoCancel": "Cancel",
+    "tooEarlyTitle": "Too early",
+    "tooEarlyBody": "It's not yet time — scheduled at {{time}}, in {{minutes}} more minutes. Please wait.",
+    "tooEarlyOk": "Got it",
     "period": {
       "morning": "Morning",
       "afternoon": "Afternoon",

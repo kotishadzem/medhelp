@@ -266,6 +266,9 @@
     "undoBody": "{{name}} als nicht eingenommen markieren?",
     "undoConfirm": "Ja, zurücknehmen",
     "undoCancel": "Abbrechen",
+    "tooEarlyTitle": "Noch zu früh",
+    "tooEarlyBody": "Einnahmezeit ist noch nicht erreicht — um {{time}}, in {{minutes}} Minuten. Bitte warten.",
+    "tooEarlyOk": "Verstanden",
     "period": {
       "morning": "Morgen",
       "afternoon": "Mittag",

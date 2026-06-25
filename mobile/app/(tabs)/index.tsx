@@ -25,6 +25,8 @@ import {
   formatWeekdayDayMonth,
   isToday,
   isTomorrow,
+  isTooEarlyToTake,
+  minutesUntilIntake,
   timePeriod,
   ymdLocal,
   type DerivedIntakeStatus,
@@ -124,9 +126,21 @@ export default function TodayScreen() {
           cancelLabel: t("today.undoCancel"),
         });
         if (ok) await setIntakeStatus(intake, "PENDING");
-      } else {
-        await setIntakeStatus(intake, "TAKEN");
+        return;
       }
+      if (isTooEarlyToTake(intake.scheduledAt)) {
+        const minutes = minutesUntilIntake(intake.scheduledAt);
+        await confirm({
+          title: t("today.tooEarlyTitle"),
+          body: t("today.tooEarlyBody", {
+            time: formatTimeHHMM(intake.scheduledAt),
+            minutes,
+          }),
+          confirmLabel: t("today.tooEarlyOk"),
+        });
+        return;
+      }
+      await setIntakeStatus(intake, "TAKEN");
     },
     [setIntakeStatus, t]
   );

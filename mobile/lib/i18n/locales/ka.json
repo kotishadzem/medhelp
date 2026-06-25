@@ -266,6 +266,9 @@
     "undoBody": "გნებავს {{name}}-ის სტატუსი დააბრუნო მიუღებელში?",
     "undoConfirm": "დიახ, დააბრუნე",
     "undoCancel": "გაუქმება",
+    "tooEarlyTitle": "ჯერ ადრეა",
+    "tooEarlyBody": "მიღების დრო ჯერ არ მოსულა — {{time}}-ზე, კიდევ {{minutes}} წუთი დარჩა. დაელოდე.",
+    "tooEarlyOk": "გასაგებია",
     "period": {
       "morning": "დილა",
       "afternoon": "შუადღე",

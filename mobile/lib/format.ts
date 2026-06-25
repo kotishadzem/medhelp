@@ -153,6 +153,31 @@ function nowAsWallClockUtc(now: number): number {
   );
 }
 
+/** How many milliseconds before the scheduled time the user is still
+ * considered "too early" to mark the intake as taken. Above this gap we
+ * refuse the mark and prompt them to wait. */
+export const TAKEN_TOO_EARLY_THRESHOLD_MS = 15 * 60 * 1000;
+
+/** Returns the milliseconds remaining until the intake's wall-clock time,
+ * or a negative number when the intake is already due/past. */
+export function minutesUntilIntake(
+  scheduledAt: string,
+  now: number = Date.now()
+): number {
+  const scheduled = new Date(scheduledAt).getTime();
+  const localNow = nowAsWallClockUtc(now);
+  return Math.round((scheduled - localNow) / 60_000);
+}
+
+export function isTooEarlyToTake(
+  scheduledAt: string,
+  now: number = Date.now()
+): boolean {
+  const scheduled = new Date(scheduledAt).getTime();
+  const localNow = nowAsWallClockUtc(now);
+  return scheduled - localNow > TAKEN_TOO_EARLY_THRESHOLD_MS;
+}
+
 export function deriveIntakeStatus(
   status: "PENDING" | "TAKEN" | "MISSED" | "SKIPPED",
   scheduledAt: string,
