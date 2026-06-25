@@ -53,6 +53,11 @@ export default function SharedDocumentScreen() {
   }
 
   const { documents, share } = query.data;
+  // The backend already filters to the bundle, but render only documents
+  // that actually carry attached files. An orphaned bundle row (parent
+  // doc deleted after share was created) would otherwise show an empty
+  // card with no openable files.
+  const visible = documents.filter((d) => d.files.length > 0);
 
   const openFile = async (fileId: string) => {
     const url = documentsApi.publicShareFileUrl(token, fileId);
@@ -80,14 +85,22 @@ export default function SharedDocumentScreen() {
           </View>
         </View>
 
-        <View style={styles.expiresPill}>
-          <Ionicons name="time-outline" size={14} color={colors.warning} />
-          <Text style={styles.expiresText}>
-            {t("documents.share.expiresOn", { date: formatDateLong(share.expiresAt) })}
-          </Text>
+        <View style={styles.metaRow}>
+          <View style={styles.countPill}>
+            <Ionicons name="documents-outline" size={14} color={colors.primary} />
+            <Text style={styles.countText}>
+              {t("documents.filesCount", { count: visible.length })}
+            </Text>
+          </View>
+          <View style={styles.expiresPill}>
+            <Ionicons name="time-outline" size={14} color={colors.warning} />
+            <Text style={styles.expiresText}>
+              {t("documents.share.expiresOn", { date: formatDateLong(share.expiresAt) })}
+            </Text>
+          </View>
         </View>
 
-        {documents.map((document) => (
+        {visible.map((document) => (
           <View key={document.id} style={styles.docBlock}>
             <View style={styles.summaryCard}>
               <DocumentTypeIcon type={document.documentType} size={56} />
@@ -165,11 +178,23 @@ const styles = StyleSheet.create({
   errorText: { color: colors.danger, fontSize: fontSize.md, textAlign: "center" },
 
   docBlock: { gap: spacing.md },
+  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs + 2 },
+  countPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.primary + "55",
+    backgroundColor: colors.primary + "18",
+  },
+  countText: { color: colors.primary, fontSize: fontSize.xs, fontWeight: "700" },
   expiresPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-    alignSelf: "flex-start",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
     borderRadius: radius.pill,
