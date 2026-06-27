@@ -304,7 +304,7 @@ function formatTodayLabel(): string {
 }
 
 function dayLabel(ymd: string, t: (k: string) => string): string {
-  const iso = `${ymd}T00:00:00`;
+  const iso = `${ymd}T00:00:00Z`;
   if (isToday(iso)) return t("today.dayToday");
   if (isTomorrow(iso)) return t("today.dayTomorrow");
   return formatWeekdayDayMonth(iso);
